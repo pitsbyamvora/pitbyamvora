@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://amvora.com.ng/sitemap.xml
