@@ -216,7 +216,7 @@ export function Header() {
             {/* Donate Pill Button */}
             <Link
               href="/donate"
-              className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#ff5500] hover:bg-[#e04b00] text-white font-bold text-xs tracking-wide shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#E85D04] hover:bg-[#D04D00] text-white font-bold text-xs tracking-wide shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
               <Heart className="w-3.5 h-3.5 text-white" />
               <span>Donate</span>
@@ -227,7 +227,7 @@ export function Header() {
           <div className="flex lg:hidden items-center gap-2">
             <Link
               href="/donate"
-              className="flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-[#ff5500] hover:bg-[#e04b00] text-white font-bold text-xs shadow-sm"
+              className="flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-[#E85D04] hover:bg-[#D04D00] text-white font-bold text-xs shadow-sm"
             >
               <Heart className="w-3.5 h-3.5 text-white" />
               <span>Donate</span>

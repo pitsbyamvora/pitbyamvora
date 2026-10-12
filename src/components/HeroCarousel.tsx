@@ -99,16 +99,10 @@ export function HeroCarousel() {
           {/* Left: Text & Action Controls */}
           <div ref={textContentRef} className="lg:col-span-7 space-y-3 sm:space-y-4">
             
-            {/* Top Pill Badge */}
-            <div className="gsap-text inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/25 text-[10px] sm:text-[11px] font-bold tracking-wider text-[#ff5500] uppercase shadow-md">
-              <Sparkles className="w-3 h-3 text-[#ff5500] animate-pulse" />
-              <span>{slide.badge}</span>
-            </div>
-
             {/* Main Title with Sharp Drop Shadow for Crisp Legibility */}
             <h1 className="gsap-text font-heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white leading-[1.15] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
               {slide.title} <br className="hidden sm:inline" />
-              <span className="text-[#ff5500] drop-shadow-[0_2px_15px_rgba(255,85,0,0.5)]">
+              <span className="text-[#E85D04] drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
                 {slide.highlight}
               </span>
             </h1>
@@ -120,11 +114,11 @@ export function HeroCarousel() {
 
             {/* Philosophy Quote in Sleek Frosted Box */}
             {slide.quote && (
-              <div className="gsap-text p-3 sm:p-3.5 rounded-xl bg-black/50 backdrop-blur-md border-l-4 border-[#ff5500] border-t border-r border-b border-white/15 max-w-xl shadow-lg">
+              <div className="gsap-text p-3 sm:p-3.5 rounded-xl bg-black/50 backdrop-blur-md border-l-4 border-[#E85D04] border-t border-r border-b border-white/15 max-w-xl shadow-lg">
                 <p className="font-heading text-xs sm:text-sm font-semibold text-white italic drop-shadow-sm">
                   {slide.quote}
                 </p>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#ff5500] uppercase tracking-wider mt-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#E85D04] uppercase tracking-wider mt-1.5">
                   <ShieldCheck className="w-3 h-3" />
                   <span>{slide.tagline}</span>
                 </div>
@@ -135,7 +129,7 @@ export function HeroCarousel() {
             <div className="gsap-text pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <Link
                 href={slide.primaryCtaLink}
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-full bg-[#ff5500] hover:bg-[#e04b00] text-white transition-all duration-200 shadow-[0_4px_20px_rgba(255,85,0,0.4)] hover:scale-[1.02] active:scale-[0.98] text-center"
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-full bg-[#E85D04] hover:bg-[#D04D00] text-white transition-all duration-200 shadow-md hover:scale-[1.02] active:scale-[0.98] text-center"
               >
                 <span>{slide.primaryCtaText}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -158,7 +152,7 @@ export function HeroCarousel() {
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-white p-0.5 border border-[#ff5500]">
+                  <div className="w-8 h-8 rounded-full bg-white p-0.5 border border-[#E85D04]">
                     <Image src="/logo.jpg" alt="Logo" width={30} height={30} className="object-contain" />
                   </div>
                   <div>
@@ -170,9 +164,6 @@ export function HeroCarousel() {
                     </p>
                   </div>
                 </div>
-                <span className="text-[11px] font-mono font-black text-[#ff5500] px-2 py-0.5 rounded-full bg-[#ff5500]/15 border border-[#ff5500]/30">
-                  0{currentSlide + 1} / 04
-                </span>
               </div>
 
               <div className="space-y-2 text-xs">
@@ -197,11 +188,10 @@ export function HeroCarousel() {
                 </div>
               </div>
 
-              <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-[10px]">
-                <span className="text-white/70">Status: <strong className="text-emerald-400">Active Proof Window</strong></span>
+              <div className="pt-2.5 border-t border-white/10 flex items-center justify-end text-[10px]">
                 <Link
                   href="/campaigns/60-day-proof-of-work"
-                  className="text-[#ff5500] font-bold hover:underline flex items-center gap-1"
+                  className="text-[#E85D04] font-bold hover:underline flex items-center gap-1"
                 >
                   <span>Explore Tests</span>
                   <ArrowRight className="w-2.5 h-2.5" />
@@ -221,15 +211,12 @@ export function HeroCarousel() {
                 onClick={() => setCurrentSlide(idx)}
                 className={`transition-all duration-300 rounded-full h-2 ${
                   idx === currentSlide
-                    ? "w-7 sm:w-10 bg-[#ff5500] shadow-[0_0_10px_rgba(255,85,0,0.6)]"
+                    ? "w-7 sm:w-10 bg-[#E85D04]"
                     : "w-2 bg-white/40 hover:bg-white/70"
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
-            <span className="text-[10px] font-mono text-white/80 ml-2">
-              0{currentSlide + 1} / 0{HERO_SLIDES.length}
-            </span>
           </div>
 
           {/* Navigation Arrows */}

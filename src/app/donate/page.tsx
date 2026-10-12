@@ -37,8 +37,8 @@ export default function DonatePage() {
       {/* Top Banner */}
       <section className="bg-[#171A19] text-white py-12 sm:py-16 border-b border-white/10 relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#ff5500] text-xs font-bold uppercase tracking-wider border border-white/10">
-            <Heart className="w-3.5 h-3.5 text-[#ff5500]" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#E85D04] text-xs font-bold uppercase tracking-wider border border-white/10">
+            <Heart className="w-3.5 h-3.5 text-[#E85D04]" />
             <span>PITS Civic Solidarity Fund</span>
           </div>
           <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-white">
@@ -56,7 +56,7 @@ export default function DonatePage() {
         <div className="bg-card border-2 border-border rounded-3xl p-6 sm:p-10 shadow-lg space-y-6">
           <div className="flex items-center justify-between border-b border-border pb-4">
             <div>
-              <span className="text-[10px] font-mono font-bold text-[#ff5500] uppercase tracking-wider">
+              <span className="text-[10px] font-mono font-bold text-[#E85D04] uppercase tracking-wider">
                 Direct Civic Account
               </span>
               <h2 className="font-heading text-xl sm:text-2xl font-black text-foreground">
@@ -88,7 +88,7 @@ export default function DonatePage() {
               <span className="text-[11px] text-white/60 block uppercase font-mono tracking-wider">
                 NUBAN Account Number
               </span>
-              <span className="font-mono font-black text-2xl sm:text-3xl text-[#ff5500] tracking-wider">
+              <span className="font-mono font-black text-2xl sm:text-3xl text-[#E85D04] tracking-wider">
                 {bankDetails.accountNumber}
               </span>
             </div>
@@ -96,7 +96,7 @@ export default function DonatePage() {
             <button
               type="button"
               onClick={handleCopy}
-              className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#ff5500] hover:bg-[#e04b00] text-white font-bold text-xs shadow-md transition w-full sm:w-auto justify-center"
+              className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#E85D04] hover:bg-[#e04b00] text-white font-bold text-xs shadow-md transition w-full sm:w-auto justify-center"
             >
               {copiedAccount ? (
                 <>
@@ -120,7 +120,7 @@ export default function DonatePage() {
         {/* In-Kind Contributions Section */}
         <div className="space-y-4">
           <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#ff5500]">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#E85D04]">
               Beyond Financial Support
             </span>
             <h3 className="font-heading font-black text-xl text-foreground">
@@ -130,7 +130,7 @@ export default function DonatePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-              <Wheat className="w-6 h-6 text-[#ff5500]" />
+              <Wheat className="w-6 h-6 text-[#E85D04]" />
               <h4 className="font-bold text-xs text-foreground">Grains & Commodity Sacks</h4>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Direct donations of rice paddy, maize, cassava, or beans for ward emergency food banks.
@@ -138,7 +138,7 @@ export default function DonatePage() {
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-              <Truck className="w-6 h-6 text-[#ff5500]" />
+              <Truck className="w-6 h-6 text-[#E85D04]" />
               <h4 className="font-bold text-xs text-foreground">Freight & Logistics Transport</h4>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Truck owners dedicating haulage capacity to move produce between farm clusters and city hubs.
@@ -146,7 +146,7 @@ export default function DonatePage() {
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
-              <Building2 className="w-6 h-6 text-[#ff5500]" />
+              <Building2 className="w-6 h-6 text-[#E85D04]" />
               <h4 className="font-bold text-xs text-foreground">Secure Storage & Hub Space</h4>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
                 Dry warehouse facilities and secure market stalls serving as neighborhood pickup hubs.
@@ -158,10 +158,10 @@ export default function DonatePage() {
         {/* Helpline */}
         <div className="p-4 rounded-2xl bg-muted/40 border border-border flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Phone className="w-4 h-4 text-[#ff5500]" />
+            <Phone className="w-4 h-4 text-[#E85D04]" />
             <span>Inquiries & Proof Enquiries: <strong>{BRAND_INFO.contact.phone}</strong></span>
           </div>
-          <Link href="/about" className="text-[#ff5500] font-bold hover:underline">
+          <Link href="/about" className="text-[#E85D04] font-bold hover:underline">
             About Our Foundation →
           </Link>
         </div>
