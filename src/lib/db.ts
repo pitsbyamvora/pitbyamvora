@@ -154,10 +154,13 @@ export async function signCommunityPetition(params: {
     ]);
 
     if (!error) {
-      // Increment signatures count via raw RPC or direct update
-      await supabase.rpc("increment_petition_signatures", {
-        petition_row_id: params.petitionId,
-      }).catch(() => null);
+      try {
+        await supabase.rpc("increment_petition_signatures", {
+          petition_row_id: params.petitionId,
+        });
+      } catch {
+        // RPC fallback ignored if not created
+      }
     }
 
     return { success: !error, error: error?.message };
