@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Sora, Inter } from "next/font/google";
 import { Header } from "@/components/Header";
@@ -76,7 +77,9 @@ export default function RootLayout({
         </div>
 
         <AuthProvider>
-          <Header />
+          <Suspense fallback={<div className="h-16 bg-white border-b border-neutral-200" />}>
+            <Header />
+          </Suspense>
           <div className="flex-1 flex flex-col relative z-10">{children}</div>
           <Footer />
         </AuthProvider>

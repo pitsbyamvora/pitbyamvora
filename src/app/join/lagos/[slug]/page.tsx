@@ -7,6 +7,8 @@ import { MapPin, Phone, Mail, CheckCircle, ArrowLeft, ChevronDown, AlertCircle }
 import { getLGABySlug, PRIMARY_NEEDS } from "@/lib/lga";
 import { submitLGARegistration } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export default function LGARegisterPage() {
   const params = useParams();
   const slug = typeof params?.slug === "string" ? params.slug : "";
