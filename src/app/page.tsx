@@ -59,40 +59,31 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+          {/* The Five 60-Day Tests — 2x2 on Mobile */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 lg:gap-8">
             {CORE_PROGRAMS.map((program) => (
               <div
                 key={program.id}
-                className="bg-card rounded-2xl p-6 sm:p-7 border border-border shadow-sm flex flex-col justify-between hover:border-[#ff5500]/60 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
+                className="bg-card rounded-xl sm:rounded-2xl p-3.5 sm:p-7 border border-border shadow-sm flex flex-col justify-between hover:border-[#ff5500]/60 hover:shadow-lg transition-all duration-300 group"
               >
-                <div className="space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] sm:text-[11px] font-extrabold uppercase px-2.5 py-1 rounded-md bg-[#ff5500]/10 text-[#ff5500] border border-[#ff5500]/20">
+                <div className="space-y-2 sm:space-y-3.5">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-[9px] sm:text-[11px] font-extrabold uppercase px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-[#ff5500]/10 text-[#ff5500] border border-[#ff5500]/20 truncate">
                       {program.category}
                     </span>
-                    <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                    <span className="text-[10px] sm:text-xs font-semibold text-muted-foreground flex items-center gap-1 shrink-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                      <span>{program.status}</span>
+                      <span className="hidden sm:inline">{program.status}</span>
                     </span>
                   </div>
 
-                  <h3 className="font-heading text-lg sm:text-xl font-bold text-card-foreground group-hover:text-[#ff5500] transition-colors">
+                  <h3 className="font-heading text-xs sm:text-lg font-bold text-card-foreground group-hover:text-[#ff5500] transition-colors line-clamp-2">
                     {program.title}
                   </h3>
 
-                  <p className="font-body text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  <p className="font-body text-[11px] sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">
                     {program.summary}
                   </p>
-                </div>
-
-                <div className="mt-6 pt-5 border-t border-border flex items-center justify-between text-xs font-bold">
-                  <Link
-                    href={program.actionLink}
-                    className="text-[#ff5500] hover:underline flex items-center gap-1.5 group-hover:translate-x-1 transition-transform"
-                  >
-                    <span>View Test Specifications</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
                 </div>
               </div>
             ))}
@@ -101,41 +92,54 @@ export default function HomePage() {
       </section>
 
       {/* 4. 60-Day Execution Structure & Measurement Phasing */}
-      <section className="py-16 sm:py-24 bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* 4. 60-Day Execution Structure & Measurement Phasing with Beautiful Motion Background */}
+      <section className="py-16 sm:py-24 bg-[#111413] border-b border-white/10 relative overflow-hidden text-white">
+        {/* Beautiful Ambient Motion Background with Glowing Orbs */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#E85D04]/20 rounded-full blur-[100px] animate-pulse" />
+          <div className="absolute top-1/2 -right-32 w-96 h-96 bg-[#356B45]/25 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: "6s" }} />
+          <div className="absolute -bottom-32 left-1/3 w-80 h-80 bg-orange-500/15 rounded-full blur-[90px] animate-pulse" style={{ animationDuration: "8s" }} />
+          {/* Subtle grid mesh overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-2xl mb-10 sm:mb-14">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#ff5500]">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#E85D04]">
               Operational Phasing
             </span>
-            <h2 className="mt-2 font-heading text-2xl sm:text-4xl font-black text-foreground tracking-tight">
+            <h2 className="mt-2 font-heading text-2xl sm:text-4xl font-black text-white tracking-tight">
               60-Day Execution Structure
             </h2>
-            <p className="mt-3 font-body text-sm sm:text-base text-muted-foreground leading-relaxed">
+            <p className="mt-3 font-body text-sm sm:text-base text-white/70 leading-relaxed">
               Moving from underestimated to unstoppable by proving what structured public intervention looks like.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+          {/* Operational Phasing — 2x2x1 on mobile, 5 cols on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6">
             {BRAND_INFO.executionPhases.map((phase, idx) => (
               <div
                 key={phase.phase}
-                className="rounded-2xl p-5 sm:p-6 border border-border bg-muted/20 flex flex-col justify-between hover:border-[#ff5500]/50 transition-all duration-300 relative group"
+                className={`rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 bg-white/[0.04] backdrop-blur-md flex flex-col justify-between hover:border-[#E85D04]/60 hover:bg-white/[0.07] transition-all duration-300 relative group shadow-lg ${
+                  idx === 4 ? "col-span-2 lg:col-span-1" : ""
+                }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold font-mono text-[#ff5500] uppercase">
+                    <span className="text-[10px] sm:text-[11px] font-bold font-mono text-[#E85D04] uppercase">
                       {phase.duration}
                     </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-black/5 dark:bg-white/10 text-muted-foreground">
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/70">
                       Step 0{idx + 1}
                     </span>
                   </div>
 
-                  <h3 className="font-heading font-extrabold text-foreground text-base sm:text-lg mb-2">
+                  <h3 className="font-heading font-extrabold text-white text-xs sm:text-base mb-1.5 line-clamp-1">
                     {phase.phase}
                   </h3>
 
-                  <p className="font-body text-xs text-muted-foreground leading-relaxed">
+                  <p className="font-body text-[11px] sm:text-xs text-white/70 leading-relaxed line-clamp-3">
                     {phase.focus}
                   </p>
                 </div>

@@ -938,3 +938,34 @@ AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION get_movement_member_count() TO anon, authenticated;
+
+
+-- ============================================================
+-- 17. GALLERY PHOTOS (ADMIN-MANAGED)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.gallery_photos (
+  id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  title       text        NOT NULL,
+  location    text        NOT NULL,
+  category    text        DEFAULT 'Field Moment',
+  image_url   text        NOT NULL,
+  description text,
+  created_at  timestamptz DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.gallery_photos ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_read_gallery" ON public.gallery_photos;
+CREATE POLICY "public_can_read_gallery"
+  ON public.gallery_photos FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "admin_can_insert_gallery" ON public.gallery_photos;
+CREATE POLICY "admin_can_insert_gallery"
+  ON public.gallery_photos FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "admin_can_delete_gallery" ON public.gallery_photos;
+CREATE POLICY "admin_can_delete_gallery"
+  ON public.gallery_photos FOR DELETE
+  USING (true);

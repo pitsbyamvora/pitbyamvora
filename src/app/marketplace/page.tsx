@@ -622,7 +622,7 @@ export default function MarketplacePage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
             {visibleProducts.map((product) => {
               const price = unitPriceFor(activePromo, product);
               const promoPct = promoPctFor(activePromo, product);
@@ -636,74 +636,74 @@ export default function MarketplacePage() {
               return (
                 <article
                   key={product.id}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-xl"
+                  className="group flex flex-col overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-card transition-shadow hover:shadow-xl"
                 >
                   <div className="relative aspect-[4/3] bg-muted">
                     <Image
                       src={product.imageUrl}
                       alt={product.title}
                       fill
-                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      sizes="(min-width: 1024px) 33vw, 50vw"
                       className="object-cover"
                     />
-                    <span className="absolute left-3 top-3 rounded-full bg-[#1A1A1A]/80 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                    <span className="absolute left-2 top-2 sm:left-3 sm:top-3 rounded-full bg-[#1A1A1A]/80 px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-[11px] font-semibold text-white backdrop-blur">
                       {product.category}
                     </span>
                     {saved > 0 && (
-                      <span className="absolute bottom-3 right-3 rounded-full bg-[#F4A942] px-3 py-1 text-[11px] font-black text-[#1A1A1A] shadow-lg">
+                      <span className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 rounded-full bg-[#F4A942] px-2 py-0.5 sm:px-3 sm:py-1 text-[9px] sm:text-[11px] font-black text-[#1A1A1A] shadow-lg">
                         Save {naira(saved)}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-1 flex-col p-5">
-                    <p className="text-xs text-muted-foreground">{product.origin}</p>
-                    <h3 className="font-heading mt-1 text-lg font-bold leading-snug">
+                  <div className="flex flex-1 flex-col p-3 sm:p-5">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{product.origin}</p>
+                    <h3 className="font-heading mt-0.5 sm:mt-1 text-xs sm:text-lg font-bold leading-snug line-clamp-2">
                       {product.title}
                     </h3>
-                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                    <p className="mt-1 line-clamp-2 text-[11px] sm:text-sm leading-relaxed text-muted-foreground hidden sm:block">
                       {product.description}
                     </p>
 
-                    <div className="mt-auto pt-5">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-heading text-2xl font-black">
+                    <div className="mt-auto pt-3 sm:pt-5">
+                      <div className="flex items-baseline gap-1 sm:gap-2">
+                        <span className="font-heading text-sm sm:text-2xl font-black">
                           {naira(price)}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
                           / {product.unit}
                         </span>
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs">
+                      <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2 text-[10px] sm:text-xs">
                         <span className="text-muted-foreground line-through">
                           {naira(product.openMarketPrice)}
                         </span>
                         {pctBelow > 0 && (
                           <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                            {pctBelow}% below market
+                            {pctBelow}% off
                           </span>
                         )}
                       </div>
                       {promoPct > 0 && activePromo && (
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          Includes code {activePromo.code} (−{promoPct}%)
+                        <p className="mt-0.5 text-[9px] sm:text-[11px] text-muted-foreground truncate">
+                          Code {activePromo.code} (−{promoPct}%)
                         </p>
                       )}
 
-                      <div className="mt-4">
+                      <div className="mt-2.5 sm:mt-4">
                         {inBasket === 0 ? (
                           <button
                             type="button"
                             onClick={() => addToCart(product)}
-                            className={`flex w-full items-center justify-center gap-2 rounded-full bg-[#F42D1E] py-3 text-sm font-bold text-white transition-colors hover:bg-[#D9241A] ${focusRing}`}
+                            className={`flex w-full items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-full bg-[#F42D1E] py-2 sm:py-3 text-xs sm:text-sm font-bold text-white transition-colors hover:bg-[#D9241A] ${focusRing}`}
                           >
-                            <Plus className="h-4 w-4" />
-                            <span>Add to basket</span>
+                            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span>Add</span>
                           </button>
                         ) : (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                              In your basket
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[11px] sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 hidden sm:inline">
+                              In basket
                             </span>
                             <QtyStepper
                               value={inBasket}

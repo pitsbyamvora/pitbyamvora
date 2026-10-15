@@ -45,7 +45,7 @@ export const RECOMMENDED_BOOKS: RecommendedBook[] = [
       "Infrastructure-Led Acceleration: Rail, Ports & Power",
       "Lessons for Developing Global South Economies",
     ],
-    cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80",
+    cover: "https://ik.imagekit.io/pha2ibrpir/image.png",
     amazonUrl: "https://www.google.com/search?q=How+China+Works+Julio+Aramberri+book+read+online",
     openLibraryUrl: "https://openlibrary.org/search?q=How+China+Works+Julio+Aramberri",
   },
@@ -62,7 +62,7 @@ export const RECOMMENDED_BOOKS: RecommendedBook[] = [
       "Negotiation Mechanics: Protecting Downside First",
       "Building Brand Equity & Public Trust",
     ],
-    cover: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=600&q=80",
+    cover: "https://ik.imagekit.io/pha2ibrpir/image(1).png",
     amazonUrl: "https://www.google.com/search?q=Think+Like+a+Billionaire+book+read+online",
     openLibraryUrl: "https://openlibrary.org/search?q=Think+Like+a+Billionaire",
   },
@@ -79,7 +79,7 @@ export const RECOMMENDED_BOOKS: RecommendedBook[] = [
       "Global Capital Strategy & World-Class Infrastructure",
       "Fostering National Cohesion & Civic Responsibility",
     ],
-    cover: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=600&q=80",
+    cover: "https://ik.imagekit.io/pha2ibrpir/image(2).png",
     amazonUrl: "https://www.google.com/search?q=From+Third+World+to+First+Lee+Kuan+Yew+read+online",
     openLibraryUrl: "https://openlibrary.org/search?q=From+Third+World+to+First+Lee+Kuan+Yew",
   },
@@ -96,7 +96,7 @@ export const RECOMMENDED_BOOKS: RecommendedBook[] = [
       "Capital Accumulation and Productive Reinvestment",
       "Free Internal Trade & Local Market Expansion",
     ],
-    cover: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=600&q=80",
+    cover: "https://ik.imagekit.io/pha2ibrpir/image(3).png",
     amazonUrl: "https://www.google.com/search?q=The+Wealth+of+Nations+Adam+Smith+read+online+free",
     openLibraryUrl: "https://openlibrary.org/books/OL7168345M/The_wealth_of_nations",
   },
@@ -113,7 +113,7 @@ export const RECOMMENDED_BOOKS: RecommendedBook[] = [
       "Critical Historical Junctures and Divergence",
       "Breaking the Mold: Achieving Institutional Inclusion",
     ],
-    cover: "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?auto=format&fit=crop&w=600&q=80",
+    cover: "https://ik.imagekit.io/pha2ibrpir/image(4).png",
     amazonUrl: "https://www.google.com/search?q=Why+Nations+Fail+Acemoglu+Robinson+read+online",
     openLibraryUrl: "https://openlibrary.org/search?q=Why+Nations+Fail+Daron+Acemoglu",
   },
@@ -130,43 +130,9 @@ export const RECOMMENDED_BOOKS: RecommendedBook[] = [
       "Put First Things First: Disciplined Priority Execution",
       "Think Win-Win: Cooperative Value Creation",
     ],
-    cover: "https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=600&q=80",
+    cover: "https://ik.imagekit.io/pha2ibrpir/image(5).png",
     amazonUrl: "https://www.google.com/search?q=7+Habits+of+Highly+Effective+People+Stephen+Covey+read+online",
     openLibraryUrl: "https://openlibrary.org/search?q=The+7+Habits+of+Highly+Effective+People",
-  },
-  {
-    title: "Poor Economics",
-    author: "Abhijit V. Banerjee & Esther Duflo",
-    category: "Practical Grassroots Relief",
-    lesson: "Radical rethinking of the ways to fight global poverty through evidence-based, small-scale, highly tested direct interventions.",
-    summary:
-      "Nobel Prize-winning economists demonstrate why grand ideological programs often fail, while targeted empirical tests—subsidized direct food distribution, preventive healthcare nudges, and local micro-credit—deliver transformative, measurable breakthroughs in everyday lives.",
-    chapters: [
-      "Rethinking the Economics of Basic Nutrition",
-      "Low-Hanging Fruit for Community Health",
-      "Empowering Local Micro-Entrepreneurs",
-      "Designing Policies Grounded in Real Proof of Work",
-    ],
-    cover: "https://images.unsplash.com/photo-1532012164546-f432f2e3777f?auto=format&fit=crop&w=600&q=80",
-    amazonUrl: "https://www.google.com/search?q=Poor+Economics+Banerjee+Duflo+read+online",
-    openLibraryUrl: "https://openlibrary.org/search?q=Poor+Economics+Abhijit+Banerjee",
-  },
-  {
-    title: "Good to Great",
-    author: "Jim Collins",
-    category: "Organizational Endurance",
-    lesson: "Great institutions don't happen through flamboyant charisma; they are built by disciplined people, disciplined thought, and disciplined action.",
-    summary:
-      "An exhaustive five-year empirical research study on how good organizations make the transition to great, enduring institutions. Essential reading for organizers building community cooperatives, enterprise unions, and sustainable civic movements that outlast their founders.",
-    chapters: [
-      "Level 5 Leadership: Personal Humility & Professional Will",
-      "First Who, Then What: Assembling the Right Core Team",
-      "Confront the Brutal Facts without Losing Faith",
-      "The Flywheel Effect: Relentless Compounding Progress",
-    ],
-    cover: "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?auto=format&fit=crop&w=600&q=80",
-    amazonUrl: "https://www.google.com/search?q=Good+to+Great+Jim+Collins+read+online",
-    openLibraryUrl: "https://openlibrary.org/search?q=Good+to+Great+Jim+Collins",
   },
 ];
 
@@ -180,7 +146,7 @@ export function LeadershipMindsetSection() {
       <div className="absolute bottom-10 -left-24 w-96 h-96 bg-[#356B45]/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-16">
-        
+
         {/* Top Header */}
         <div className="max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E85D04]/10 border border-[#E85D04]/20 text-xs font-bold uppercase tracking-widest text-[#E85D04]">
@@ -255,12 +221,12 @@ export function LeadershipMindsetSection() {
             </p>
           </div>
 
-          {/* Book Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Book Cards Grid — 2x2 on Mobile, 3 cols on medium/large for 6 books */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
             {RECOMMENDED_BOOKS.map((book) => (
               <div
                 key={book.title}
-                className="group flex flex-col justify-between rounded-2xl border border-border bg-card overflow-hidden hover:border-[#E85D04]/60 hover:shadow-xl transition-all duration-300"
+                className="group flex flex-col justify-between rounded-xl sm:rounded-2xl border border-border bg-card overflow-hidden hover:border-[#E85D04]/60 hover:shadow-xl transition-all duration-300"
               >
                 {/* Book Cover Image with Quick Action triggers */}
                 <div
@@ -271,60 +237,60 @@ export function LeadershipMindsetSection() {
                     src={book.cover}
                     alt={book.title}
                     fill
-                    sizes="(max-width: 768px) 100vw, 25vw"
+                    sizes="(max-width: 768px) 50vw, 33vw"
                     className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
                   {/* Category tag */}
-                  <div className="absolute top-3 left-3">
-                    <span className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold tracking-wider uppercase border border-white/10">
+                  <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+                    <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-white text-[9px] sm:text-[10px] font-bold tracking-wider uppercase border border-white/10 line-clamp-1">
                       {book.category}
                     </span>
                   </div>
 
                   {/* Title and Author */}
-                  <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <h4 className="font-heading font-black text-lg leading-tight drop-shadow-md">
+                  <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3 text-white">
+                    <h4 className="font-heading font-black text-xs sm:text-base leading-tight drop-shadow-md line-clamp-2">
                       {book.title}
                     </h4>
-                    <p className="text-xs text-white/80 font-medium mt-0.5">
+                    <p className="text-[10px] sm:text-xs text-white/80 font-medium mt-0.5 truncate">
                       by {book.author}
                     </p>
                   </div>
                 </div>
 
                 {/* Core Takeaway Body */}
-                <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4 bg-card">
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#E85D04]">
+                <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4 bg-card">
+                  <div className="space-y-1">
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#E85D04]">
                       Core Insight
                     </span>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                    <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-2 sm:line-clamp-3">
                       {book.lesson}
                     </p>
                   </div>
 
                   {/* Functional Action Buttons */}
-                  <div className="pt-3 border-t border-border/50 flex items-center justify-between gap-2">
+                  <div className="pt-2 sm:pt-3 border-t border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2">
                     <button
                       type="button"
                       onClick={() => setSelectedBook(book)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E85D04] hover:underline"
+                      className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold text-[#E85D04] hover:underline"
                     >
-                      <BookMarked className="w-3.5 h-3.5" />
-                      <span>Read Overview</span>
+                      <BookMarked className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span>Overview</span>
                     </button>
 
                     <a
                       href={book.amazonUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted px-2.5 py-1 rounded-md border border-border transition-colors"
+                      className="inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-semibold text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted px-2 py-0.5 sm:px-2.5 sm:py-1 rounded border border-border transition-colors w-fit"
                       title={`Find ${book.title} online`}
                     >
-                      <span>Find Online</span>
-                      <ExternalLink className="w-3 h-3 text-[#E85D04]" />
+                      <span>Online</span>
+                      <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#E85D04]" />
                     </a>
                   </div>
                 </div>
@@ -336,7 +302,7 @@ export function LeadershipMindsetSection() {
         {/* Motivational Callout Banner */}
         <div className="rounded-2xl border border-border bg-gradient-to-br from-[#171A19] to-neutral-900 p-8 sm:p-10 text-white relative overflow-hidden shadow-xl">
           <div className="absolute -right-8 -bottom-8 w-64 h-64 bg-[#E85D04]/10 rounded-full blur-2xl pointer-events-none" />
-          
+
           <div className="relative z-10 max-w-3xl space-y-4">
             <Quote className="w-8 h-8 text-[#E85D04] opacity-80" />
             <blockquote className="font-heading text-xl sm:text-2xl md:text-3xl font-black leading-snug">

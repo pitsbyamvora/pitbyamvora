@@ -30,10 +30,10 @@ import { BRAND_INFO } from "@/content/campaign";
    IMAGES Ã¢â‚¬â€ Unsplash + local logo
    ========================================================================= */
 const IMAGES = {
-  hero: "https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?w=1800&q=80&auto=format&fit=crop",
+  hero: "https://ik.imagekit.io/pha2ibrpir/image_BOw7otlOH.png",
   founder: "/founder.jpg",
-  street: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80&auto=format&fit=crop",
-  rice: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=900&q=80&auto=format&fit=crop",
+  street: "https://ik.imagekit.io/pha2ibrpir/image_6rrb6nSKT.png",
+  rice: "https://ik.imagekit.io/pha2ibrpir/image_fpOCGBRCn.png",
   connect: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=900&q=80&auto=format&fit=crop",
   move: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=900&q=80&auto=format&fit=crop",
   food: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=900&q=80&auto=format&fit=crop",
@@ -60,7 +60,7 @@ const GALLERY = [
     caption: "Supporting local traders",
   },
   {
-    src: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=900&q=80&auto=format&fit=crop",
+    src: "https://ik.imagekit.io/pha2ibrpir/image_A8-esxIZR.png",
     alt: "Agricultural programme",
     caption: "Agricultural empowerment",
   },
@@ -80,7 +80,7 @@ const GALLERY = [
     caption: "The people united",
   },
   {
-    src: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80&auto=format&fit=crop",
+    src: "https://ik.imagekit.io/pha2ibrpir/image_tuhDoHzuE.png",
     alt: "Streets of Nigeria",
     caption: "Power in the Street",
   },
@@ -251,7 +251,7 @@ export default function AboutPage() {
         <div className="mx-auto grid max-w-7xl items-end gap-12 px-4 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:px-8">
           <div className="pb-14 lg:pb-20">
             <span className="inline-block rounded-full bg-[#E85D04]/20 px-3 py-1 text-xs font-bold tracking-wider text-[#E85D04] uppercase">
-              PITS Ã¢â‚¬â€ Amvora Light Foundation
+              PITS By Amvora Light Foundation
             </span>
             <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-6xl lg:text-7xl leading-none">
               Power in the Street
@@ -455,11 +455,10 @@ export default function AboutPage() {
               {BEYOND.map((b, i) => (
                 <li
                   key={b}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                    i === 0
-                      ? "bg-[#171A19] text-[#E85D04]"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${i === 0
+                    ? "bg-[#171A19] text-[#E85D04]"
+                    : "bg-muted text-muted-foreground"
+                    }`}
                 >
                   {b}
                 </li>
@@ -486,28 +485,28 @@ export default function AboutPage() {
             Affordability, and Community.
           </p>
 
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* The Five 60-Day Tests — 2x2x1 on Mobile */}
+          <div className="mt-8 sm:mt-10 grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {TESTS.map((t, index) => (
               <article
                 key={t.name}
-                className={`overflow-hidden rounded-2xl border border-border bg-card/60 shadow-sm transition hover:shadow-md ${
-                  index === 4 ? "sm:col-span-2 lg:col-span-1" : ""
-                }`}
+                className={`overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-card/60 shadow-sm transition hover:shadow-md flex flex-col justify-between ${index === 4 ? "col-span-2 lg:col-span-1" : ""
+                  }`}
               >
                 <img
                   src={IMAGES[t.img as keyof typeof IMAGES]}
                   alt={t.name}
-                  className="aspect-[16/9] w-full object-cover"
+                  className="aspect-[16/10] sm:aspect-[16/9] w-full object-cover"
                   loading="lazy"
                 />
-                <div className="p-5 border-t border-border">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E85D04]/10 text-[#E85D04]">
-                      <t.icon className="h-4 w-4" aria-hidden="true" />
+                <div className="p-3.5 sm:p-5 border-t border-border flex-1 flex flex-col justify-between">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-lg bg-[#E85D04]/10 text-[#E85D04] shrink-0">
+                      <t.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                     </span>
-                    <h3 className="text-base font-bold text-foreground">{t.name}</h3>
+                    <h3 className="text-xs sm:text-base font-bold text-foreground leading-tight line-clamp-1">{t.name}</h3>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{t.text}</p>
+                  <p className="mt-2 text-[11px] sm:text-sm text-muted-foreground leading-relaxed line-clamp-3">{t.text}</p>
                 </div>
               </article>
             ))}
@@ -596,24 +595,25 @@ export default function AboutPage() {
             measurement system. We publish the quantities, costs, and actual savings.
           </p>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {/* The Higher Standard of Evidence — 2x2x1 on Mobile */}
+          <div className="mt-8 sm:mt-10 grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             {EVIDENCE.map((e, index) => (
               <div
                 key={e.title}
-                className="relative flex flex-col justify-between rounded-2xl border border-border bg-card/60 p-5 shadow-sm"
+                className={`relative flex flex-col justify-between rounded-xl sm:rounded-2xl border border-border bg-card/60 p-4 sm:p-5 shadow-sm ${index === 4 ? "col-span-2 lg:col-span-1" : ""
+                  }`}
               >
                 <div>
                   <span
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-white mb-3 ${
-                      e.final ? "bg-[#E85D04]" : "bg-[#171A19]"
-                    }`}
+                    className={`inline-flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-white mb-2 sm:mb-3 ${e.final ? "bg-[#E85D04]" : "bg-[#171A19]"
+                      }`}
                   >
-                    <e.icon className="h-4 w-4" aria-hidden="true" />
+                    <e.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
                   </span>
-                  <p className="font-bold text-foreground">{e.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{e.text}</p>
+                  <p className="font-bold text-foreground text-xs sm:text-base">{e.title}</p>
+                  <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-3">{e.text}</p>
                 </div>
-                <span className="mt-4 text-[10px] font-bold uppercase tracking-wider text-[#E85D04]">
+                <span className="mt-3 sm:mt-4 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-[#E85D04]">
                   Step {index + 1}
                 </span>
               </div>
@@ -679,19 +679,21 @@ export default function AboutPage() {
               <span>Day 60</span>
             </div>
 
-            <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {PHASES.map((p) => (
+            {/* Execution Phases — 2x2x1 on Mobile */}
+            <ul className="mt-8 grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              {PHASES.map((p, idx) => (
                 <li
                   key={p.name}
-                  className="rounded-2xl border border-border bg-card/60 p-5 shadow-sm flex flex-col justify-between"
+                  className={`rounded-xl sm:rounded-2xl border border-border bg-card/60 p-4 sm:p-5 shadow-sm flex flex-col justify-between ${idx === 4 ? "col-span-2 lg:col-span-1" : ""
+                    }`}
                 >
                   <div>
-                    <p className="font-bold text-foreground">{p.name}</p>
-                    <p className="text-xs font-semibold text-[#E85D04] mt-0.5">
-                      Days {p.from}Ã¢â‚¬â€œ{p.to}
+                    <p className="font-bold text-foreground text-xs sm:text-base leading-tight">{p.name}</p>
+                    <p className="text-[10px] sm:text-xs font-semibold text-[#E85D04] mt-0.5">
+                      Days {p.from}–{p.to}
                     </p>
                   </div>
-                  <p className="mt-4 text-xs text-muted-foreground">{p.text}</p>
+                  <p className="mt-3 text-[11px] sm:text-xs text-muted-foreground leading-relaxed line-clamp-3">{p.text}</p>
                 </li>
               ))}
             </ul>

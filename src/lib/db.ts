@@ -1303,3 +1303,131 @@ export async function fetchAllMovementMembers(): Promise<MovementMember[]> {
     return [];
   }
 }
+
+
+// ==========================================
+// 11. GALLERY PHOTOS (ADMIN-MANAGED)
+// ==========================================
+
+export interface GalleryPhoto {
+  id: string;
+  title: string;
+  location: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+  createdAt?: string;
+}
+
+export async function fetchGalleryPhotos(): Promise<GalleryPhoto[]> {
+  const fallback = [
+    {
+      id: "g1",
+      title: "Grassroots Ward Dialogue",
+      location: "Alimosho, Lagos",
+      category: "Community Meeting",
+      imageUrl: "https://ik.imagekit.io/pha2ibrpir/image_pxCQOZvjY.png",
+      description: "Local residents gathering to discuss food security cooperatives and clean neighborhood drainage interventions.",
+    },
+    {
+      id: "g2",
+      title: "Youth Tech & Data Training",
+      location: "Ikeja Hub, Lagos",
+      category: "Skills & Education",
+      imageUrl: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80",
+      description: "Young volunteer monitors learning real-time mobile ledger recording and community issue mapping.",
+    },
+    {
+      id: "g3",
+      title: "Direct Rice Harvest Logistics",
+      location: "Argungu Rice Paddies, Kebbi",
+      category: "Agriculture & Food",
+      imageUrl: "https://ik.imagekit.io/pha2ibrpir/image(2)_fjZF6B84R.png",
+      description: "Tracking harvest bags from paddy to milling to ensure zero middleman markup before reaching community hubs.",
+    },
+    {
+      id: "g4",
+      title: "Market Traders Engagement",
+      location: "Bodija Market, Ibadan",
+      category: "Market Co-ops",
+      imageUrl: "https://ik.imagekit.io/pha2ibrpir/image(1)_9mav2T70X.png",
+      description: "Women cooperative leaders uniting to bulk-order food items at wholesale farm-gate prices.",
+    },
+    {
+      id: "g5",
+      title: "Community Problem-Solving Teams",
+      location: "Surulere, Lagos",
+      category: "Civic Action",
+      imageUrl: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=800&q=80",
+      description: "Volunteer teams inspecting municipal water access points and street lighting challenges.",
+    },
+    {
+      id: "g6",
+      title: "Lagos Street Mobilization",
+      location: "Ojuelegba Corridor, Lagos",
+      category: "Civic Outreach",
+      imageUrl: "https://ik.imagekit.io/pha2ibrpir/image_pkK9hegzK.png",
+      description: "Organizers distributing information cards on 60-day price relief and citizen rights.",
+    },
+  ];
+
+  if (!isSupabaseConfigured) return fallback;
+
+  try {
+    const { data, error } = await supabase
+      .from("gallery_photos")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error || !data || data.length === 0) return fallback;
+
+    return data.map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      location: item.location,
+      category: item.category || "Field Moment",
+      imageUrl: item.image_url,
+      description: item.description || "",
+      createdAt: item.created_at,
+    }));
+  } catch {
+    return fallback;
+  }
+}
+
+export async function addGalleryPhoto(photo: {
+  title: string;
+  location: string;
+  category: string;
+  imageUrl: string;
+  description: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: true };
+
+  try {
+    const { error } = await supabase.from("gallery_photos").insert({
+      title: photo.title,
+      location: photo.location,
+      category: photo.category,
+      image_url: photo.imageUrl,
+      description: photo.description,
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to add photo" };
+  }
+}
+
+export async function deleteGalleryPhoto(id: string): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: true };
+
+  try {
+    const { error } = await supabase.from("gallery_photos").delete().eq("id", id);
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to delete photo" };
+  }
+}

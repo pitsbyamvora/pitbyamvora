@@ -31,7 +31,7 @@ export const QUICK_SERVICE_CATEGORIES: QuickServiceCategory[] = [
     name: "Buy Airtime or Data",
     categoryFilter: "Civic Connectivity",
     iconName: "Smartphone",
-    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02560?auto=format&fit=crop&w=600&q=80",
+    image: "https://ik.imagekit.io/pha2ibrpir/image_89ebvHr4G.png",
     tagline: "PITS Connect subsidized internet vouchers & mobile bundles",
   },
   {
