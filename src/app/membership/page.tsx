@@ -259,7 +259,7 @@ export default function MembershipPage() {
                     type="button"
                     onClick={() => {
                       setSubmitted(false);
-                      setFormData({ fullName: "", phone: "", email: "", state: "Lagos", lga: "", proofReference: "" });
+                      setFormData({ fullName: "", phone: "", email: "", state: "Lagos", lga: "", proofReference: "", referrerPhone: "" });
                     }}
                     className="px-6 py-3 rounded-xl border border-border text-xs font-semibold hover:bg-muted transition"
                   >

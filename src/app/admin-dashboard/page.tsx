@@ -8,6 +8,9 @@ import { useAuth } from "@/context/AuthContext";
 import { MARKETPLACE_PRODUCTS, MarketplaceProduct } from "@/content/marketplace";
 import {
   fetchMarketplaceProducts,
+  addMarketplaceProduct,
+  deleteMarketplaceProduct,
+  updateProductStock,
   fetchAllPaidMemberships,
   approvePaidMembership,
   PaidMembership,
@@ -40,16 +43,24 @@ import {
   Camera,
   Trash2,
   Plus,
+  ShieldAlert,
+  Loader2,
 } from "lucide-react";
 
 type AdminTab = "movement" | "memberships" | "withdrawals" | "marketplace" | "gallery";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
 
   const [activeTab, setActiveTab] = useState<AdminTab>("movement");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Admin login form states
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminLoginLoading, setAdminLoginLoading] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState<string | null>(null);
 
   // Data states
   const [movementSupporters, setMovementSupporters] = useState<MovementMember[]>([]);
@@ -75,6 +86,21 @@ export default function AdminDashboardPage() {
   });
   const [photoSubmitting, setPhotoSubmitting] = useState(false);
 
+  // Add Product Modal
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    title: "",
+    category: "Grains & Rice" as "Grains & Rice" | "Tubers & Staples" | "Cooking Oils" | "Civic Connectivity",
+    openMarketPrice: 0,
+    cooperativePrice: 0,
+    unit: "",
+    origin: "Nigeria",
+    imageUrl: "",
+    description: "",
+  });
+  const [productSubmitting, setProductSubmitting] = useState(false);
+  const [productError, setProductError] = useState<string | null>(null);
+
   const loadAllData = async () => {
     setRefreshing(true);
     try {
@@ -96,15 +122,50 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    loadAllData();
-  }, []);
+    if (!authLoading && user) {
+      loadAllData();
+    }
+  }, [authLoading, user]);
 
-  const handleToggleProductStock = (productId: string) => {
-    setProductsList((prev) =>
-      prev.map((prod) =>
-        prod.id === productId ? { ...prod, inStock: !prod.inStock } : prod
-      )
-    );
+  const handleToggleProductStock = async (productId: string, currentStock: boolean) => {
+    const res = await updateProductStock(productId, !currentStock);
+    if (res.success) {
+      loadAllData();
+    }
+  };
+
+  const handleAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProductError(null);
+    if (!newProduct.title.trim() || !newProduct.unit.trim() || !newProduct.imageUrl.trim()) {
+      setProductError("Title, unit, and image URL are required.");
+      return;
+    }
+    setProductSubmitting(true);
+    const res = await addMarketplaceProduct(newProduct);
+    setProductSubmitting(false);
+    if (res.success) {
+      setIsAddProductOpen(false);
+      setNewProduct({
+        title: "",
+        category: "Grains & Rice",
+        openMarketPrice: 0,
+        cooperativePrice: 0,
+        unit: "",
+        origin: "Nigeria",
+        imageUrl: "",
+        description: "",
+      });
+      loadAllData();
+    } else {
+      setProductError(res.error || "Failed to add product. Check Supabase RLS permissions.");
+    }
+  };
+
+  const handleDeleteProduct = async (id: string, title: string) => {
+    if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+    const res = await deleteMarketplaceProduct(id);
+    if (res.success) loadAllData();
   };
 
   const handleAddPhotoSubmit = async (e: React.FormEvent) => {
@@ -127,6 +188,23 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminLoginError(null);
+    if (!adminEmail.trim() || !adminPassword) {
+      setAdminLoginError("Please enter your admin email and password.");
+      return;
+    }
+
+    setAdminLoginLoading(true);
+    const res = await signIn(adminEmail.trim(), adminPassword);
+    setAdminLoginLoading(false);
+
+    if (res.error) {
+      setAdminLoginError(res.error);
+    }
+  };
+
   const pendingMembershipsCount = memberships.filter((m) => m.paymentStatus === "pending").length;
   const pendingWithdrawalsCount = withdrawals.filter((w) => w.status === "pending").length;
 
@@ -137,6 +215,117 @@ export default function AdminDashboardPage() {
     { id: "marketplace", label: "Marketplace Products", icon: ShoppingBag, count: productsList.length },
     { id: "gallery", label: "Live Field Gallery", icon: Camera, count: galleryPhotos.length },
   ];
+
+  // 1. Auth Loading State
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="flex flex-col items-center gap-3 text-neutral-500 text-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-[#E85D04]" />
+          <span>Verifying admin authorization...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Strict Role Verification
+  const isAdmin = user && (user.role === "admin" || user.email === "moremillionvoices@gmail.com");
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-[90vh] flex items-center justify-center px-4 py-12 bg-neutral-50">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-neutral-200 p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-14 h-14 rounded-2xl bg-[#E85D04]/10 text-[#E85D04] flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <h2 className="font-heading font-black text-2xl text-neutral-900">
+              Admin Portal Login
+            </h2>
+            <p className="text-xs sm:text-sm text-neutral-500">
+              Enter authorized administrator credentials to access management controls.
+            </p>
+          </div>
+
+          {user && !isAdmin && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex flex-col gap-2">
+              <p>
+                Logged in as <strong>{user.email}</strong>, but this account is not assigned an administrator role in Supabase.
+              </p>
+              <button
+                onClick={() => signOut()}
+                className="text-xs font-bold text-[#E85D04] underline text-left hover:text-[#d14e00]"
+              >
+                Sign out to switch to an Admin account
+              </button>
+            </div>
+          )}
+
+          {adminLoginError && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs">
+              {adminLoginError}
+            </div>
+          )}
+
+          {!user && (
+            <form onSubmit={handleAdminLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                  Admin Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="admin@amvora.org"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="••••••••"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={adminLoginLoading}
+                className="w-full py-3 rounded-xl bg-[#E85D04] text-white font-bold text-sm hover:bg-[#d14e00] transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {adminLoginLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying Admin...</span>
+                  </>
+                ) : (
+                  <span>Sign In as Admin</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="pt-2 text-center border-t border-neutral-100">
+            <Link
+              href="/"
+              className="text-xs text-neutral-500 hover:text-neutral-900"
+            >
+              ← Back to Main Website
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col md:flex-row">
@@ -478,56 +667,252 @@ export default function AdminDashboardPage() {
             <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <span className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider block">
-                  Active Products
+                  Total Products
                 </span>
                 <p className="text-2xl font-black text-neutral-900">{productsList.length}</p>
               </div>
-              <Link
-                href="/vendor"
-                className="px-4 py-2 rounded-lg bg-[#E85D04] text-white text-xs font-bold hover:bg-[#d14e00] transition w-fit"
+              <button
+                onClick={() => setIsAddProductOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#E85D04] text-white text-xs font-bold hover:bg-[#d14e00] transition w-fit shadow-sm"
               >
-                + Open Vendor Portal to Add Items
-              </Link>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add New Product</span>
+              </button>
             </div>
 
             <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-bold">
-                    <tr>
-                      <th className="py-3 px-4">Item</th>
-                      <th className="py-3 px-4">Category</th>
-                      <th className="py-3 px-4">Retail Price</th>
-                      <th className="py-3 px-4">Member Price</th>
-                      <th className="py-3 px-4 text-right">Availability</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-100 text-neutral-700">
-                    {productsList.map((prod) => (
-                      <tr key={prod.id} className="hover:bg-neutral-50/60 transition">
-                        <td className="py-3 px-4 font-bold text-neutral-900">{prod.title}</td>
-                        <td className="py-3 px-4 text-neutral-500">{prod.category}</td>
-                        <td className="py-3 px-4 font-mono">₦{prod.openMarketPrice.toLocaleString()}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-[#E85D04]">₦{prod.cooperativePrice.toLocaleString()}</td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            onClick={() => handleToggleProductStock(prod.id)}
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition ${
-                              prod.inStock
-                                ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                                : "bg-red-50 text-red-700 hover:bg-red-100"
-                            }`}
-                          >
-                            {prod.inStock ? "In Stock" : "Out of Stock"}
-                          </button>
-                        </td>
+              {productsList.length === 0 ? (
+                <div className="p-8 text-center text-xs text-neutral-500">
+                  No products yet. Click &ldquo;Add New Product&rdquo; to create your first listing.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-bold">
+                      <tr>
+                        <th className="py-3 px-4">Item</th>
+                        <th className="py-3 px-4">Category</th>
+                        <th className="py-3 px-4">Retail Price</th>
+                        <th className="py-3 px-4">Member Price</th>
+                        <th className="py-3 px-4">Stock</th>
+                        <th className="py-3 px-4 text-right">Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 text-neutral-700">
+                      {productsList.map((prod) => (
+                        <tr key={prod.id} className="hover:bg-neutral-50/60 transition">
+                          <td className="py-3 px-4 font-bold text-neutral-900">{prod.title}</td>
+                          <td className="py-3 px-4 text-neutral-500">{prod.category}</td>
+                          <td className="py-3 px-4 font-mono">₦{prod.openMarketPrice.toLocaleString()}</td>
+                          <td className="py-3 px-4 font-mono font-bold text-[#E85D04]">₦{prod.cooperativePrice.toLocaleString()}</td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => handleToggleProductStock(prod.id, prod.inStock)}
+                              className={`px-3 py-1 rounded-full text-[10px] font-bold transition ${
+                                prod.inStock
+                                  ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                  : "bg-red-50 text-red-700 hover:bg-red-100"
+                              }`}
+                            >
+                              {prod.inStock ? "In Stock" : "Out of Stock"}
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => handleDeleteProduct(prod.id, prod.title)}
+                              className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition"
+                              title="Delete product"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
+
+            {/* ── ADD PRODUCT MODAL ── */}
+            {isAddProductOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div className="bg-white rounded-3xl border border-neutral-200 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                  <div className="p-6 border-b border-neutral-100 flex items-center justify-between">
+                    <h3 className="font-bold text-base text-neutral-900">Add New Product</h3>
+                    <button
+                      onClick={() => { setIsAddProductOpen(false); setProductError(null); }}
+                      className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleAddProduct} className="p-6 space-y-4">
+                    {productError && (
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs">
+                        {productError}
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                        Product Title *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Ofada Rice — 5kg"
+                        value={newProduct.title}
+                        onChange={(e) => setNewProduct((p) => ({ ...p, title: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                      />
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                        Category *
+                      </label>
+                      <select
+                        value={newProduct.category}
+                        onChange={(e) =>
+                          setNewProduct((p) => ({
+                            ...p,
+                            category: e.target.value as typeof newProduct.category,
+                          }))
+                        }
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                      >
+                        <option>Grains &amp; Rice</option>
+                        <option>Tubers &amp; Staples</option>
+                        <option>Cooking Oils</option>
+                        <option>Civic Connectivity</option>
+                      </select>
+                    </div>
+
+                    {/* Prices */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                          Retail Price (₦) *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min={0}
+                          placeholder="0"
+                          value={newProduct.openMarketPrice || ""}
+                          onChange={(e) => setNewProduct((p) => ({ ...p, openMarketPrice: Number(e.target.value) }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                          Member Price (₦) *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min={0}
+                          placeholder="0"
+                          value={newProduct.cooperativePrice || ""}
+                          onChange={(e) => setNewProduct((p) => ({ ...p, cooperativePrice: Number(e.target.value) }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Unit & Origin */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                          Unit *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. per 5kg bag"
+                          value={newProduct.unit}
+                          onChange={(e) => setNewProduct((p) => ({ ...p, unit: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                          Origin
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Lagos, Nigeria"
+                          value={newProduct.origin}
+                          onChange={(e) => setNewProduct((p) => ({ ...p, origin: e.target.value }))}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Image URL */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                        Image URL *
+                      </label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://..."
+                        value={newProduct.imageUrl}
+                        onChange={(e) => setNewProduct((p) => ({ ...p, imageUrl: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04]"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-neutral-700 mb-1.5 uppercase tracking-wider">
+                        Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Brief product description..."
+                        value={newProduct.description}
+                        onChange={(e) => setNewProduct((p) => ({ ...p, description: e.target.value }))}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-sm text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#E85D04] resize-none"
+                      />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => { setIsAddProductOpen(false); setProductError(null); }}
+                        className="flex-1 py-2.5 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={productSubmitting}
+                        className="flex-1 py-2.5 rounded-xl bg-[#E85D04] text-white text-xs font-bold hover:bg-[#d14e00] transition shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {productSubmitting ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <span>Add Product</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
         {/* ── TAB 5: LIVE FIELD GALLERY MANAGEMENT ── */}
         {activeTab === "gallery" && (
           <div className="space-y-4">

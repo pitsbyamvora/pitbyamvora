@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { CheckCircle2, ArrowRight, AlertCircle, Sparkles } from "lucide-react";
-import { joinMovement } from "@/lib/db";
+import { joinMovement, fetchMovementMemberCount } from "@/lib/db";
 
 export function JoinMovementSection() {
   const [fullName, setFullName] = useState("");
@@ -12,6 +12,13 @@ export function JoinMovementSection() {
   const [loading, setLoading] = useState(false);
   const [joined, setJoined] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [supporterCount, setSupporterCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchMovementMemberCount().then((count) => {
+      setSupporterCount(count);
+    });
+  }, [joined]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +82,9 @@ export function JoinMovementSection() {
 
             <div className="pt-2 flex items-center justify-center md:justify-start gap-6 text-xs text-neutral-500 font-medium">
               <div>
-                <span className="text-lg font-black text-neutral-900 block font-mono">2,480+</span>
+                <span className="text-lg font-black text-neutral-900 block font-mono">
+                  {supporterCount !== null ? supporterCount.toLocaleString() : "..."}
+                </span>
                 <span>Active Supporters</span>
               </div>
               <div className="w-px h-8 bg-neutral-200" />

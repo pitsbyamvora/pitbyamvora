@@ -39,12 +39,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (isSupabaseConfigured) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
+            let userRole: UserRole = (session.user.user_metadata?.role as UserRole) || "member";
+            try {
+              const { data: prof } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", session.user.id)
+                .single();
+              if (prof?.role) {
+                userRole = prof.role as UserRole;
+              }
+            } catch {
+              // fallback to metadata
+            }
+
             setUser({
               id: session.user.id,
               email: session.user.email || "",
               fullName: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Member",
               phone: session.user.user_metadata?.phone,
-              role: (session.user.user_metadata?.role as UserRole) || "member",
+              role: userRole,
               stateOfResidence: session.user.user_metadata?.state_of_residence || "Lagos",
               isVerified: Boolean(session.user.email_confirmed_at),
               joinedDate: session.user.created_at ? session.user.created_at.substring(0, 10) : "2026-01-01",
@@ -55,12 +69,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { data: authListener } = supabase.auth.onAuthStateChange(
             async (_event, session) => {
               if (session?.user) {
+                let userRole: UserRole = (session.user.user_metadata?.role as UserRole) || "member";
+                try {
+                  const { data: prof } = await supabase
+                    .from("profiles")
+                    .select("role")
+                    .eq("id", session.user.id)
+                    .single();
+                  if (prof?.role) {
+                    userRole = prof.role as UserRole;
+                  }
+                } catch {
+                  // fallback to metadata
+                }
+
                 setUser({
                   id: session.user.id,
                   email: session.user.email || "",
                   fullName: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Member",
                   phone: session.user.user_metadata?.phone,
-                  role: (session.user.user_metadata?.role as UserRole) || "member",
+                  role: userRole,
                   stateOfResidence: session.user.user_metadata?.state_of_residence || "Lagos",
                   isVerified: Boolean(session.user.email_confirmed_at),
                   joinedDate: session.user.created_at ? session.user.created_at.substring(0, 10) : "2026-01-01",

@@ -181,7 +181,7 @@ export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> 
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq("in_stock", true);
+      .order("created_at", { ascending: false });
 
     if (error || !data || data.length === 0) {
       return MARKETPLACE_PRODUCTS;
@@ -194,15 +194,83 @@ export async function fetchMarketplaceProducts(): Promise<MarketplaceProduct[]> 
       openMarketPrice: Number(p.open_market_price),
       cooperativePrice: Number(p.cooperative_price),
       unit: p.unit,
-      origin: p.origin,
+      origin: p.origin || "Nigeria",
       imageUrl: p.image_url,
       inStock: p.in_stock,
-      stockCount: p.stock_count,
-      description: p.description,
+      stockCount: p.stock_count || 100,
+      description: p.description || "",
       pickupHubs: p.pickup_hubs || [],
     }));
   } catch {
     return MARKETPLACE_PRODUCTS;
+  }
+}
+
+export async function addMarketplaceProduct(product: {
+  title: string;
+  category: "Grains & Rice" | "Tubers & Staples" | "Cooking Oils" | "Civic Connectivity";
+  openMarketPrice: number;
+  cooperativePrice: number;
+  unit: string;
+  origin?: string;
+  imageUrl: string;
+  description: string;
+}): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: true };
+
+  const slug = `pits-${product.title.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/-+/g, "-")}-${Date.now()}`;
+
+  try {
+    const { error } = await supabase.from("products").insert({
+      slug,
+      title: product.title,
+      category: product.category,
+      open_market_price: product.openMarketPrice,
+      cooperative_price: product.cooperativePrice,
+      unit: product.unit,
+      origin: product.origin || "Nigeria",
+      image_url: product.imageUrl,
+      description: product.description,
+      in_stock: true,
+      stock_count: 100,
+    });
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to add product" };
+  }
+}
+
+export async function deleteMarketplaceProduct(idOrSlug: string): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: true };
+
+  try {
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .or(`id.eq.${idOrSlug},slug.eq.${idOrSlug}`);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to delete product" };
+  }
+}
+
+export async function updateProductStock(idOrSlug: string, inStock: boolean): Promise<{ success: boolean; error?: string }> {
+  if (!isSupabaseConfigured) return { success: true };
+
+  try {
+    const { error } = await supabase
+      .from("products")
+      .update({ in_stock: inStock })
+      .or(`id.eq.${idOrSlug},slug.eq.${idOrSlug}`);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to update stock" };
   }
 }
 
@@ -1006,12 +1074,12 @@ export async function fetchMemberWallet(phone: string): Promise<MemberWalletSumm
 
   if (!isSupabaseConfigured) {
     return {
-      totalReferrals: 12,
-      totalPoints: 180, // 12 * 15pt
+      totalReferrals: 0,
+      totalPoints: 0,
       withdrawnAmount: 0,
       pendingWithdrawal: 0,
-      availableBalanceNaira: 180,
-      availablePoints: 180,
+      availableBalanceNaira: 0,
+      availablePoints: 0,
     };
   }
 
@@ -1139,20 +1207,7 @@ export async function recordReferralSignup(data: {
 
 export async function fetchAllWithdrawalRequests(): Promise<WithdrawalRequest[]> {
   if (!isSupabaseConfigured) {
-    return [
-      {
-        id: "w-1",
-        memberPhone: "08031234567",
-        memberName: "Chidubem Okafor",
-        bankName: "Access Bank",
-        accountNumber: "0029482103",
-        accountName: "Chidubem Okafor",
-        pointsRedeemed: 3500,
-        nairaAmount: 3500,
-        status: "pending",
-        createdAt: new Date().toISOString(),
-      },
-    ];
+    return [];
   }
 
   try {
@@ -1247,40 +1302,23 @@ export async function joinMovement(data: {
 }
 
 export async function fetchMovementMemberCount(): Promise<number> {
-  if (!isSupabaseConfigured) return 2480;
+  if (!isSupabaseConfigured) return 0;
 
   try {
     const { count, error } = await supabase
       .from("movement_members")
       .select("*", { count: "exact", head: true });
 
-    if (error) return 2480;
-    return count ?? 2480;
+    if (error) return 0;
+    return count ?? 0;
   } catch {
-    return 2480;
+    return 0;
   }
 }
 
 export async function fetchAllMovementMembers(): Promise<MovementMember[]> {
   if (!isSupabaseConfigured) {
-    return [
-      {
-        id: "m-1",
-        fullName: "Damilola Bakare",
-        phone: "08023456789",
-        email: "dami@example.com",
-        state: "Lagos",
-        joinedAt: new Date().toISOString(),
-      },
-      {
-        id: "m-2",
-        fullName: "Emeka Okonkwo",
-        phone: "08169998811",
-        email: "",
-        state: "Lagos",
-        joinedAt: new Date().toISOString(),
-      },
-    ];
+    return [];
   }
 
   try {
