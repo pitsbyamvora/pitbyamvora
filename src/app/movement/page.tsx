@@ -10,29 +10,29 @@ export const metadata: Metadata = {
 
 export default function MovementPage() {
   return (
-    <div className="flex flex-col w-full bg-background text-foreground">
+    <div className="flex flex-col w-full bg-transparent text-foreground">
       {/* Header Banner */}
-      <section className="bg-[#171A19] text-white py-20 border-b border-border/20">
+      <section className="py-16 sm:py-20 border-b border-border/40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold tracking-wider text-[#ff5500] uppercase">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-muted/60 border border-border text-xs font-bold tracking-wider text-[#E85D04] uppercase">
             <span>PITS 2027 • POWER IN THE STREET</span>
             <span>•</span>
             <span>{BRAND_INFO.motto.toUpperCase()}</span>
           </div>
 
-          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-tight">
             “Action Versus Campaign Promises. <br className="hidden sm:inline" />
-            <span className="text-[#ff5500]">Proof, Not 60 Days of Waiting.”</span>
+            <span className="text-[#E85D04]">Proof, Not 60 Days of Waiting.”</span>
           </h1>
 
-          <p className="font-body text-lg sm:text-xl text-white/85 max-w-3xl leading-relaxed font-light">
+          <p className="font-body text-lg sm:text-xl text-muted-foreground max-w-3xl leading-relaxed font-normal">
             {BRAND_INFO.declaration}
           </p>
         </div>
       </section>
 
       {/* Philosophy Section */}
-      <section className="py-16 bg-card border-b border-border">
+      <section className="py-16 border-b border-border">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
           <span className="text-xs font-bold uppercase tracking-widest text-[#ff5500]">
             The Core Concept

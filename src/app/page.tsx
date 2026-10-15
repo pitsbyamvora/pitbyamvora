@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { HeroCarousel } from "@/components/HeroCarousel";
+import { LeadershipMindsetSection } from "@/components/LeadershipMindsetSection";
+import { HomeMarketplaceSection } from "@/components/HomeMarketplaceSection";
+import { HomeGallerySection } from "@/components/HomeGallerySection";
+import { JoinMovementSection } from "@/components/JoinMovementSection";
 import {
   BRAND_INFO,
   CORE_PROGRAMS,
@@ -9,7 +13,7 @@ import { ArrowRight, Sparkles, CheckCircle2, Shield, HeartHandshake, AlertCircle
 export default function HomePage() {
   return (
     <div className="flex flex-col w-full bg-background text-foreground overflow-x-hidden">
-      {/* 1. Multi-Frame Hero Carousel with GSAP Animations & Stock Photography */}
+      {/* 1. Multi-Frame Hero Carousel */}
       <HeroCarousel />
 
       {/* 2. Core Operational Philosophy from PDF */}
@@ -170,7 +174,7 @@ export default function HomePage() {
           <div className="pt-2">
             <Link
               href="/campaigns/60-day-proof-of-work"
-              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#ff5500] to-[#e04b00] hover:to-[#c73e00] text-white font-bold text-xs sm:text-sm transition-all duration-200 shadow-[0_4px_20px_rgba(255,85,0,0.35)] hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-gradient-to-r from-[#E85D04] to-[#d44f00] text-white font-bold text-xs sm:text-sm transition-all duration-200 shadow-[0_4px_20px_rgba(232,93,4,0.35)] hover:scale-[1.02] active:scale-[0.98]"
             >
               <span>Inspect Proof-of-Work Architecture</span>
               <ArrowRight className="w-4 h-4" />
@@ -179,29 +183,39 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Citizen Mobilization Strip */}
-      <section className="py-16 sm:py-24 bg-muted/40 relative">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
-          <h2 className="font-heading text-2xl sm:text-4xl font-black text-foreground">
-            The Real Power Is In The Streets
+      {/* 5. Youth Leadership, National Mindset & Recommended Books */}
+      <LeadershipMindsetSection />
+
+      {/* 6. Community Marketplace — Direct Farm-Gate Products */}
+      <HomeMarketplaceSection />
+
+      {/* 7. Live Field Photo Gallery */}
+      <HomeGallerySection />
+
+      {/* 8. Join The Movement (Grassroots Civic Solidarity Network) */}
+      <JoinMovementSection />
+
+      {/* 9. Citizen Empowerment & Marketplace Community CTA */}
+      <section className="py-16 sm:py-20 bg-neutral-100 border-t border-neutral-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
+          <h2 className="font-heading text-2xl sm:text-3xl font-black text-neutral-900">
+            Wholesale Essentials for Every Nigerian
           </h2>
-          <p className="font-body text-sm sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            We are deploying foot soldiers and community organizers to connect residents directly with food, mobility, connectivity, and opportunity.
+          <p className="text-sm text-neutral-600 max-w-xl mx-auto leading-relaxed">
+            Create a free account to browse directly or join our member discount club to unlock up to 50% off your food staples.
           </p>
-          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3.5">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/volunteer"
-              className="flex items-center justify-center gap-2 px-8 py-3.5 text-xs sm:text-sm font-bold rounded-xl bg-gradient-to-r from-[#ff5500] to-[#e04b00] text-white hover:to-[#c73e00] transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
+              href="/register"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#E85D04] text-white text-xs sm:text-sm font-bold hover:bg-[#d14e00] transition shadow-sm"
             >
-              <HeartHandshake className="w-4 h-4" />
-              <span>Volunteer as a Foot Soldier</span>
+              Create Free Account
             </Link>
             <Link
-              href="/report"
-              className="flex items-center justify-center gap-2 px-8 py-3.5 text-xs sm:text-sm font-semibold rounded-xl border border-border text-foreground hover:bg-card transition-all"
+              href="/marketplace"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl border border-neutral-300 bg-white text-neutral-800 text-xs sm:text-sm font-semibold hover:bg-neutral-50 transition"
             >
-              <AlertCircle className="w-4 h-4 text-[#ff5500]" />
-              <span>Report a Community Issue</span>
+              Browse Marketplace
             </Link>
           </div>
         </div>

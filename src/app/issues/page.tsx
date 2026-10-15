@@ -84,22 +84,20 @@ export default function IssuesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-transparent text-foreground pb-20">
       {/* Top Banner with Civic Header */}
-      <section className="bg-[#171A19] text-white py-12 sm:py-16 border-b border-white/10 relative overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-[#ff5500]/10 rounded-full blur-3xl pointer-events-none" />
-
+      <section className="py-14 sm:py-16 border-b border-border/40 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#ff5500] text-xs font-bold uppercase tracking-wider border border-white/10">
-                <AlertCircle className="w-3.5 h-3.5 text-[#ff5500]" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 text-[#E85D04] text-xs font-bold uppercase tracking-wider border border-border">
+                <AlertCircle className="w-3.5 h-3.5 text-[#E85D04]" />
                 <span>PITS Grassroots Surveillance</span>
               </div>
-              <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white">
+              <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-foreground">
                 Community Issues Hub
               </h1>
-              <p className="font-body text-xs sm:text-sm md:text-base text-white/80 leading-relaxed font-normal">
+              <p className="font-body text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed font-normal">
                 Verifying local infrastructure decay, food price gouging, and public service abandonment across all 36 Nigerian states. Documented by citizens, verified by foot soldiers.
               </p>
             </div>
@@ -107,7 +105,7 @@ export default function IssuesPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <Link
                 href="/report"
-                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[#ff5500] hover:bg-[#e04b00] text-white font-bold text-xs sm:text-sm shadow-lg hover:shadow-xl transition-all"
+                className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-[#E85D04] hover:bg-[#D04D00] text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all"
               >
                 <Plus className="w-4 h-4" />
                 <span>Report an Issue in Your Ward</span>

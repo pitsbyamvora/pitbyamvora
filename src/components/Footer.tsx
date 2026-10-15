@@ -80,40 +80,40 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Quick Navigation Matching amvora.com.ng */}
+          {/* Platform Links */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#ff5500] mb-4">
-              Civic Action
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#E85D04] mb-4">
+              Platform
             </h3>
             <ul className="space-y-2 text-sm text-white/80 font-body">
               <li>
-                <Link href="/movement" className="hover:text-[#ff5500] transition-colors">
-                  The PITS Movement
+                <Link href="/marketplace" className="hover:text-[#E85D04] transition-colors">
+                  Marketplace &amp; Essentials
                 </Link>
               </li>
               <li>
-                <Link href="/campaigns/60-day-proof-of-work" className="hover:text-[#ff5500] transition-colors">
-                  The 60-Day Challenge
+                <Link href="/about" className="hover:text-[#E85D04] transition-colors">
+                  About Amvora
                 </Link>
               </li>
               <li>
-                <Link href="/issues" className="hover:text-[#ff5500] transition-colors">
-                  Community Issues
+                <Link href="/programs" className="hover:text-[#E85D04] transition-colors">
+                  Programs
                 </Link>
               </li>
               <li>
-                <Link href="/report" className="hover:text-[#ff5500] transition-colors">
-                  Report Problem
+                <Link href="/campaigns/60-day-proof-of-work" className="hover:text-[#E85D04] transition-colors">
+                  60-Day Challenge
                 </Link>
               </li>
               <li>
-                <Link href="/petitions" className="hover:text-[#ff5500] transition-colors">
-                  Active Petitions
+                <Link href="/membership" className="hover:text-[#E85D04] transition-colors">
+                  Member Discount Pass
                 </Link>
               </li>
               <li>
-                <Link href="/volunteer" className="hover:text-[#ff5500] transition-colors">
-                  Join as Volunteer
+                <Link href="/vendor" className="hover:text-[#E85D04] transition-colors">
+                  Vendor Partner Portal
                 </Link>
               </li>
             </ul>

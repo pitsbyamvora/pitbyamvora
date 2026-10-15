@@ -106,12 +106,12 @@ export default function MemberPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F5EF] pb-16">
+    <div className="min-h-screen bg-transparent pb-16">
       {/* Portal Top Bar */}
-      <div className="bg-[#171A19] text-white border-b border-white/10 pt-8 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="border-b border-border/40 pt-8 pb-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-white p-1 border-2 border-[#ff5500] shadow-md flex-shrink-0">
+            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-card p-1 border-2 border-[#E85D04] shadow-md flex-shrink-0">
               <Image
                 src="/logo.jpg"
                 alt="PITS Logo"
@@ -121,17 +121,17 @@ export default function MemberPortalPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-white">
+                <h1 className="font-heading text-2xl sm:text-3xl font-extrabold text-foreground">
                   {user.fullName}
                 </h1>
-                <span className="bg-[#ff5500] text-white text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full">
+                <span className="bg-[#E85D04] text-white text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full">
                   {user.role}
                 </span>
               </div>
-              <p className="text-xs text-white/70 mt-1 flex items-center gap-3">
-                <span>Member ID: <strong className="text-white font-mono">{user.membershipNumber || "PITS-704921"}</strong></span>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-3">
+                <span>Member ID: <strong className="text-foreground font-mono">{user.membershipNumber || "PITS-704921"}</strong></span>
                 <span>•</span>
-                <span>State Chapter: <strong className="text-[#ff5500]">{user.stateOfResidence || "Lagos"}</strong></span>
+                <span>State Chapter: <strong className="text-[#E85D04]">{user.stateOfResidence || "Lagos"}</strong></span>
               </p>
             </div>
           </div>

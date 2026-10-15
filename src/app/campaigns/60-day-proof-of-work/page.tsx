@@ -10,34 +10,34 @@ export const metadata: Metadata = {
 
 export default function ProofOfWorkPage() {
   return (
-    <div className="flex flex-col w-full bg-background text-foreground">
+    <div className="flex flex-col w-full bg-transparent text-foreground">
       {/* 1. Header Banner */}
-      <section className="bg-[#171A19] text-white py-20 border-b border-border/20">
+      <section className="py-16 sm:py-20 border-b border-border/40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold tracking-wider text-[#ff5500] uppercase">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-muted/60 border border-border text-xs font-bold tracking-wider text-[#E85D04] uppercase">
             <span>PITS 2027 • PUBLIC SERVICE PILOT</span>
             <span>•</span>
             <span>THE UNDERMINED IS UNSTOPPABLE</span>
           </div>
 
-          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white leading-tight">
+          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-tight">
             “Don’t Give Us 60 Days to Promise. <br className="hidden sm:inline" />
-            <span className="text-[#ff5500]">Give Us 60 Days to Prove.”</span>
+            <span className="text-[#E85D04]">Give Us 60 Days to Prove.”</span>
           </h1>
 
-          <p className="font-body text-lg sm:text-xl text-white/85 max-w-3xl leading-relaxed font-light">
+          <p className="font-body text-lg sm:text-xl text-muted-foreground max-w-3xl leading-relaxed font-normal">
             Welcome, everyone. We are here to launch a new kind of political movement. For decades, people have promised and failed. PITS has not come as a movement to make promises; we are here to test the waters for 60 days.
           </p>
 
-          <div className="pt-4 flex flex-wrap gap-4 text-xs font-medium text-white/80">
-            <div className="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-md">
-              <span className="text-[#ff5500] font-bold">Action:</span> Versus campaign promises
+          <div className="pt-4 flex flex-wrap gap-4 text-xs font-medium text-foreground">
+            <div className="flex items-center gap-2 bg-muted/60 border border-border px-3.5 py-2 rounded-md">
+              <span className="text-[#E85D04] font-bold">Action:</span> Versus campaign promises
             </div>
-            <div className="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-md">
-              <span className="text-[#ff5500] font-bold">Proof:</span> Not 60 days of waiting
+            <div className="flex items-center gap-2 bg-muted/60 border border-border px-3.5 py-2 rounded-md">
+              <span className="text-[#E85D04] font-bold">Proof:</span> Not 60 days of waiting
             </div>
-            <div className="flex items-center gap-2 bg-white/10 px-3.5 py-2 rounded-md">
-              <span className="text-[#ff5500] font-bold">Foundation:</span> {BRAND_INFO.foundation}
+            <div className="flex items-center gap-2 bg-muted/60 border border-border px-3.5 py-2 rounded-md">
+              <span className="text-[#E85D04] font-bold">Foundation:</span> {BRAND_INFO.foundation}
             </div>
           </div>
         </div>

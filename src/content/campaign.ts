@@ -27,7 +27,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     secondaryCtaText: "Join Movement",
     secondaryCtaLink: "/volunteer",
     // Replace with your ImageKit or Cloudinary URL when ready
-    image: "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=1400&q=85",
+    image: "https://ik.imagekit.io/pha2ibrpir/IMG_0822.jpeg?updatedAt=1791913122926",
     tagline: "Supported by Amvora Light Foundation",
   },
   {
@@ -43,7 +43,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     secondaryCtaText: "Report Local Issue",
     secondaryCtaLink: "/report",
     // Replace with your ImageKit or Cloudinary URL when ready
-    image: "https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=1400&q=85",
+    image: "https://ik.imagekit.io/pha2ibrpir/charity.jpg",
     tagline: "Action versus campaign promises",
   },
   {
@@ -59,7 +59,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     secondaryCtaText: "Sign Petitions",
     secondaryCtaLink: "/petitions",
     // Replace with your ImageKit or Cloudinary URL when ready
-    image: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1400&q=85",
+    image: "https://ik.imagekit.io/pha2ibrpir/WhatsApp%20Image%202026-10-13%20at%2018.36.47.jpeg",
     tagline: "Moving from underestimated to unstoppable",
   },
   {
@@ -75,7 +75,7 @@ export const HERO_SLIDES: HeroSlide[] = [
     secondaryCtaText: "Community Issues",
     secondaryCtaLink: "/issues",
     // Replace with your ImageKit or Cloudinary URL when ready
-    image: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1400&q=85",
+    image: "https://ik.imagekit.io/pha2ibrpir/c0fde81e-5d91-4c55-ad86-2c6cee67b221.jpeg?updatedAt=1791591399064",
     tagline: "PITS — Power in the Street",
   },
 ];

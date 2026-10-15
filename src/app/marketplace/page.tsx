@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,659 +11,1135 @@ import {
 } from "@/content/marketplace";
 import { createMarketplaceOrder, fetchMarketplaceProducts } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
+import { ServiceCategoryBar } from "@/components/ServiceCategoryBar";
 import {
   ShoppingBag,
-  Tag,
-  Sparkles,
+  Search,
   CheckCircle2,
-  MapPin,
-  TrendingDown,
-  ArrowRight,
   Plus,
   Minus,
   Trash2,
   X,
-  ShieldCheck,
-  Percent,
-  Receipt,
   HeartHandshake,
+  ArrowLeft,
+  Copy,
+  Check,
+  Loader2,
 } from "lucide-react";
 
-interface CartItem {
+/*
+  Brand colours (from the Amvora Light logo)
+  ink #1A1A1A · flame red #F42D1E · amber #F4A942
+*/
+
+interface CartEntry {
+  id: string;
+  quantity: number;
+}
+
+interface CartLine {
   product: MarketplaceProduct;
   quantity: number;
+  unitPrice: number; // price after promo, per unit
+  lineTotal: number;
+}
+
+interface PlacedOrder {
+  code: string;
+  hub: string;
+  total: number;
+  name: string;
+  promo?: string;
+  itemCount: number;
+}
+
+const CART_KEY = "pits-marketplace-cart-v1";
+const MAX_QTY = 99;
+
+const categories = [
+  "All",
+  "Grains & Rice",
+  "Tubers & Staples",
+  "Cooking Oils",
+  "Civic Connectivity",
+];
+
+const quickCodes = ["PITS2027", "RICETEST", "CITIZEN60", "WARDFOOD"];
+
+const hubs = [
+  "Lagos (Ojodu Underpass Hub)",
+  "Abuja (Wuse Market Distribution Node)",
+  "Ibadan (Bodija Cooperative Post)",
+  "Kano (Dawanau Grain Center)",
+  "Kebbi (Argungu Pilot Mill)",
+  "Port Harcourt (Mile 1 Node)",
+];
+
+const sortOptions = [
+  { value: "featured", label: "Featured" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+  { value: "savings", label: "Biggest saving" },
+];
+
+const NG_PHONE = /^(?:\+?234|0)[789][01]\d{8}$/;
+
+const naira = (n: number) => `₦${n.toLocaleString("en-NG")}`;
+
+const focusRing =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4A942]";
+
+// Promo discount for one product. Respects the code's category, so the price on the
+// card is always the price the customer is charged.
+function promoPctFor(promo: PromoCode | null, product: MarketplaceProduct) {
+  if (!promo) return 0;
+  const eligible =
+    !promo.applicableCategory || promo.applicableCategory === product.category;
+  return eligible ? promo.discountPercentage : 0;
+}
+
+function unitPriceFor(promo: PromoCode | null, product: MarketplaceProduct) {
+  return Math.round(
+    product.cooperativePrice * (1 - promoPctFor(promo, product) / 100)
+  );
+}
+
+function QtyStepper({
+  value,
+  onChange,
+  label,
+}: {
+  value: number;
+  onChange: (next: number) => void;
+  label: string;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-full border border-border bg-background">
+      <button
+        type="button"
+        onClick={() => onChange(value - 1)}
+        aria-label={`Decrease quantity of ${label}`}
+        className={`flex h-9 w-9 items-center justify-center rounded-l-full text-foreground transition-colors hover:bg-muted ${focusRing}`}
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </button>
+      <span
+        aria-live="polite"
+        className="w-8 text-center text-sm font-bold tabular-nums text-foreground"
+      >
+        {value}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        disabled={value >= MAX_QTY}
+        aria-label={`Increase quantity of ${label}`}
+        className={`flex h-9 w-9 items-center justify-center rounded-r-full text-foreground transition-colors hover:bg-muted disabled:opacity-40 ${focusRing}`}
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
 }
 
 export default function MarketplacePage() {
   const { user } = useAuth();
-  const [products, setProducts] = useState<MarketplaceProduct[]>(MARKETPLACE_PRODUCTS);
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
 
-  useEffect(() => {
-    fetchMarketplaceProducts().then((data) => {
-      if (data && data.length > 0) {
-        setProducts(data);
-      }
-    });
-  }, []);
-  
-  // Promo Code State
-  const [promoCodeInput, setPromoCodeInput] = useState("");
+  // Catalogue
+  const [products, setProducts] = useState<MarketplaceProduct[]>(MARKETPLACE_PRODUCTS);
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("featured");
+
+  // Basket (stored as id + quantity so prices always come from the latest catalogue)
+  const [cart, setCart] = useState<CartEntry[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [step, setStep] = useState<"cart" | "details">("cart");
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Promo
+  const [promoInput, setPromoInput] = useState("");
   const [activePromo, setActivePromo] = useState<PromoCode | null>(
-    VERIFIED_PROMO_CODES["PITS2027"] // Pre-activated default for citizen delight
+    VERIFIED_PROMO_CODES["PITS2027"] ?? null
   );
   const [promoError, setPromoError] = useState<string | null>(null);
-  
-  // Checkout & Order Modal State
-  const [selectedHub, setSelectedHub] = useState("Lagos (Ojodu Underpass Hub)");
+
+  // Checkout
+  const [selectedHub, setSelectedHub] = useState(hubs[0]);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [orderConfirmed, setOrderConfirmed] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const categories = [
-    "All",
-    "Grains & Rice",
-    "Tubers & Staples",
-    "Cooking Oils",
-    "Civic Connectivity",
-  ];
+  // Load the latest products from the database
+  useEffect(() => {
+    let cancelled = false;
+    fetchMarketplaceProducts().then((data) => {
+      if (!cancelled && data && data.length > 0) setProducts(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const quickCodes = ["PITS2027", "RICETEST", "CITIZEN60", "WARDFOOD"];
-
-  const handleApplyPromo = (codeToApply?: string) => {
-    const code = (codeToApply || promoCodeInput).trim().toUpperCase();
-    setPromoError(null);
-
-    if (!code) {
-      setPromoError("Please enter a valid citizen promo code.");
-      return;
+  // Restore the basket after a refresh
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CART_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setCart(
+            parsed.filter(
+              (e) =>
+                e &&
+                typeof e.id === "string" &&
+                Number.isFinite(e.quantity) &&
+                e.quantity > 0
+            )
+          );
+        }
+      }
+    } catch {
+      // Storage unavailable: start with an empty basket
     }
+    setHydrated(true);
+  }, []);
 
-    const matchedPromo = VERIFIED_PROMO_CODES[code];
-    if (matchedPromo) {
-      setActivePromo(matchedPromo);
-      setPromoCodeInput(code);
-    } else {
-      setPromoError("Invalid code. Try citizen codes: PITS2027, RICETEST, or CITIZEN60.");
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    } catch {
+      // Ignore storage errors
     }
+  }, [cart, hydrated]);
+
+  // Pre-fill the name for signed-in members
+  useEffect(() => {
+    if (user?.fullName && !customerName) setCustomerName(user.fullName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  // Lock page scroll and close on Escape while a panel is open
+  useEffect(() => {
+    if (!isCartOpen && !placed) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (placed) setPlaced(null);
+      else closeCart();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCartOpen, placed]);
+
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    },
+    []
+  );
+
+  const showToast = (message: string) => {
+    setToast(message);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2200);
+  };
+
+  const closeCart = () => {
+    setIsCartOpen(false);
+    setStep("cart");
+    setOrderError(null);
+  };
+
+  const qtyOf = (id: string) => cart.find((e) => e.id === id)?.quantity ?? 0;
+
+  const setQty = (id: string, quantity: number) => {
+    const q = Math.min(quantity, MAX_QTY);
+    setCart((prev) => {
+      if (q <= 0) return prev.filter((e) => e.id !== id);
+      return prev.some((e) => e.id === id)
+        ? prev.map((e) => (e.id === id ? { ...e, quantity: q } : e))
+        : [...prev, { id, quantity: q }];
+    });
   };
 
   const addToCart = (product: MarketplaceProduct) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
+    setQty(product.id, qtyOf(product.id) + 1);
+    showToast(`${product.title} added to basket`);
+  };
+
+  // Basket lines and totals
+  const lines: CartLine[] = useMemo(() => {
+    const result: CartLine[] = [];
+    for (const entry of cart) {
+      const product = products.find((p) => p.id === entry.id);
+      if (!product) continue;
+      const unitPrice = unitPriceFor(activePromo, product);
+      result.push({
+        product,
+        quantity: entry.quantity,
+        unitPrice,
+        lineTotal: unitPrice * entry.quantity,
+      });
+    }
+    return result;
+  }, [cart, products, activePromo]);
+
+  const itemCount = lines.reduce((a, l) => a + l.quantity, 0);
+  const marketTotal = lines.reduce(
+    (a, l) => a + l.product.openMarketPrice * l.quantity,
+    0
+  );
+  const baseTotal = lines.reduce(
+    (a, l) => a + l.product.cooperativePrice * l.quantity,
+    0
+  );
+  const total = lines.reduce((a, l) => a + l.lineTotal, 0);
+  const discount = baseTotal - total;
+  const savings = Math.max(0, marketTotal - total);
+  const promoNotUsed = !!activePromo && lines.length > 0 && discount === 0;
+
+  // If the basket empties while checking out, go back to the basket step
+  useEffect(() => {
+    if (lines.length === 0) setStep("cart");
+  }, [lines.length]);
+
+  // Search, filter and sort
+  const visibleProducts = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = products.filter((p) => {
+      const inCategory = selectedCategory === "All" || p.category === selectedCategory;
+      const matches =
+        !q || `${p.title} ${p.origin} ${p.description}`.toLowerCase().includes(q);
+      return inCategory && matches;
     });
-    setIsCartOpen(true);
+    const price = (p: MarketplaceProduct) => unitPriceFor(activePromo, p);
+    if (sort === "price-asc") return [...list].sort((a, b) => price(a) - price(b));
+    if (sort === "price-desc") return [...list].sort((a, b) => price(b) - price(a));
+    if (sort === "savings")
+      return [...list].sort(
+        (a, b) =>
+          b.openMarketPrice - price(b) - (a.openMarketPrice - price(a))
+      );
+    return list;
+  }, [products, selectedCategory, search, sort, activePromo]);
+
+  const filtersActive = selectedCategory !== "All" || search.trim() !== "";
+  const clearFilters = () => {
+    setSelectedCategory("All");
+    setSearch("");
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.product.id === productId) {
-            const newQ = item.quantity + delta;
-            return newQ > 0 ? { ...item, quantity: newQ } : null;
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[]
-    );
+  // Promo codes
+  const handleApplyPromo = (codeToApply?: string) => {
+    const code = (codeToApply ?? promoInput).trim().toUpperCase();
+    setPromoError(null);
+    if (!code) {
+      setPromoError("Enter a promo code.");
+      return;
+    }
+    const matched = VERIFIED_PROMO_CODES[code];
+    if (matched) {
+      setActivePromo(matched);
+      setPromoInput("");
+    } else {
+      setPromoError("That code isn't valid. Check the spelling and try again.");
+    }
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+  const toggleQuickCode = (code: string) => {
+    if (activePromo?.code === code) setActivePromo(null);
+    else handleApplyPromo(code);
   };
 
-  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-
-  // Price calculations
-  const openMarketSubtotal = cart.reduce(
-    (acc, item) => acc + item.product.openMarketPrice * item.quantity,
-    0
-  );
-
-  const cooperativeSubtotal = cart.reduce(
-    (acc, item) => acc + item.product.cooperativePrice * item.quantity,
-    0
-  );
-
-  const discountAmount = activePromo
-    ? Math.round((cooperativeSubtotal * activePromo.discountPercentage) / 100)
-    : 0;
-
-  const finalPayable = Math.max(0, cooperativeSubtotal - discountAmount);
-  const totalSavings = openMarketSubtotal - finalPayable;
-
-  const filteredProducts =
-    selectedCategory === "All"
-      ? products
-      : products.filter((p) => p.category === selectedCategory);
-
+  // Checkout
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (lines.length === 0 || placing) return;
 
-    const newOrderNumber = `PITS-HUB-${Math.floor(10000 + Math.random() * 90000)}`;
-    
+    const cleanPhone = customerPhone.replace(/[\s()-]/g, "");
+    const nextErrors: { name?: string; phone?: string } = {};
+    if (customerName.trim().length < 2) nextErrors.name = "Enter your full name.";
+    if (!NG_PHONE.test(cleanPhone))
+      nextErrors.phone = "Enter a Nigerian phone number, like 0803 123 4567.";
+    setErrors(nextErrors);
+    if (nextErrors.name || nextErrors.phone) return;
+
+    setPlacing(true);
+    setOrderError(null);
+    const code = `PITS-HUB-${Math.floor(10000 + Math.random() * 90000)}`;
+
     try {
       await createMarketplaceOrder({
-        orderCode: newOrderNumber,
-        buyerName: customerName || (user?.fullName || "Citizen Buyer"),
-        buyerPhone: customerPhone || "08000000000",
+        orderCode: code,
+        buyerName: customerName.trim(),
+        buyerPhone: cleanPhone,
         buyerEmail: user?.email,
         pickupHub: selectedHub,
-        items: cart.map((item) => ({
-          id: item.product.id,
-          title: item.product.title,
-          unit: item.product.unit,
-          quantity: item.quantity,
-          unitPrice: item.product.cooperativePrice,
+        items: lines.map((l) => ({
+          id: l.product.id,
+          title: l.product.title,
+          unit: l.product.unit,
+          quantity: l.quantity,
+          unitPrice: l.product.cooperativePrice,
         })),
         appliedPromo: activePromo?.code,
-        discountAmount,
-        totalPrice: finalPayable,
+        discountAmount: discount,
+        totalPrice: total,
         userId: user?.id,
       });
-    } catch {
-      // Graceful fallback already handled
-    }
 
-    setOrderConfirmed(newOrderNumber);
-    setCart([]);
+      // Snapshot first, because clearing the basket resets the totals
+      setPlaced({
+        code,
+        hub: selectedHub,
+        total,
+        name: customerName.trim(),
+        promo: discount > 0 ? activePromo?.code : undefined,
+        itemCount,
+      });
+      setCart([]);
+      closeCart();
+    } catch {
+      setOrderError(
+        "We couldn't place your order. Check your connection and try again. Your basket is still saved."
+      );
+    } finally {
+      setPlacing(false);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground pb-24 relative overflow-x-hidden">
-      {/* 1. Header Banner */}
-      <section className="bg-[#171A19] text-white py-12 sm:py-16 border-b border-white/10 relative overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#ff5500]/15 rounded-full blur-3xl pointer-events-none" />
+  const copyOrderCode = async () => {
+    if (!placed) return;
+    try {
+      await navigator.clipboard.writeText(placed.code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard not available
+    }
+  };
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#ff5500] text-xs font-bold uppercase tracking-wider border border-white/10">
-                <Sparkles className="w-3.5 h-3.5 text-[#ff5500]" />
-                <span>The Rice Test & PITS Food Hub</span>
-              </div>
-              <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-white">
-                Direct Food & Commodity Hub
+  const inputClass = `w-full rounded-xl border bg-background px-3 py-2.5 text-sm text-foreground ${focusRing}`;
+
+  return (
+    <div className="relative min-h-screen overflow-x-hidden bg-transparent pb-32 text-foreground">
+      {/* Page header */}
+      <section className="border-b border-border/40 py-12 sm:py-14">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-sm font-semibold text-[#F42D1E]">
+                The Rice Test &amp; PITS Food Hub
+              </p>
+              <h1 className="font-heading mt-2 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+                Direct food and commodity hub
               </h1>
-              <p className="font-body text-xs sm:text-sm md:text-base text-white/80 leading-relaxed font-normal">
-                Direct farm-gate food supplies bypassing middleman hoarding. Use your citizen promo codes to access heavy subsidies on locally milled rice, garri, and essentials.
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                Farm-gate food supplies without middleman hoarding. Use your citizen
+                promo code for subsidised prices on locally milled rice, garri and
+                other essentials.
               </p>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/become-partner"
-                className="flex items-center gap-2 px-5 py-3 rounded-full border border-white/20 hover:bg-white/10 text-white font-bold text-xs transition"
-              >
-                <HeartHandshake className="w-4 h-4 text-[#ff5500]" />
-                <span>Become a Producer Partner</span>
-              </Link>
-            </div>
+            <Link
+              href="/become-partner"
+              className={`inline-flex items-center gap-2 self-start rounded-full border border-border px-5 py-3 text-sm font-bold transition-colors hover:bg-muted ${focusRing}`}
+            >
+              <HeartHandshake className="h-4 w-4 text-[#F42D1E]" />
+              <span>Become a producer partner</span>
+            </Link>
           </div>
+
+          <ol className="mt-8 grid gap-4 text-sm sm:grid-cols-3">
+            {[
+              ["Fill your basket", "Pick items at farm-gate prices."],
+              ["Reserve with a pickup hub", "Choose the hub nearest to you."],
+              ["Pay when you collect", "Show your order ID at the hub."],
+            ].map(([title, text], i) => (
+              <li key={title} className="flex gap-3">
+                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[#F4A942] text-xs font-black text-[#1A1A1A]">
+                  {i + 1}
+                </span>
+                <span>
+                  <span className="block font-bold">{title}</span>
+                  <span className="text-muted-foreground">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      {/* 2. Interactive Citizen Promo Code Banner */}
-      <div className="bg-[#ff5500] text-white py-4 px-4 sm:px-6 lg:px-8 shadow-md">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-heading font-black uppercase tracking-wider bg-black/20 px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5" />
-              <span>Citizen Promo Code Active:</span>
-            </span>
-            <span className="font-medium text-white/95">
-              {activePromo ? (
-                <>
-                  <strong className="underline font-mono font-bold">{activePromo.code}</strong> — {activePromo.description}
-                </>
-              ) : (
-                "Click a citizen voucher code below to slash prices instantly:"
-              )}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-bold text-white/80 uppercase">Quick Codes:</span>
-            {quickCodes.map((code) => (
-              <button
-                key={code}
-                onClick={() => handleApplyPromo(code)}
-                className={`px-3 py-1 rounded-full text-[11px] font-mono font-bold transition shadow-sm ${
-                  activePromo?.code === code
-                    ? "bg-white text-[#ff5500] ring-2 ring-white"
-                    : "bg-black/25 text-white hover:bg-black/40"
-                }`}
-              >
-                {code}
-              </button>
-            ))}
+      {/* Promo banner */}
+      <div className="bg-[#1A1A1A] px-4 py-4 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs md:flex-row md:items-center md:justify-between">
+          <p className="text-white/85">
+            {activePromo ? (
+              <>
+                <span className="font-semibold text-[#F4A942]">Promo code applied:</span>{" "}
+                <strong className="font-mono">{activePromo.code}</strong>
+                {" · "}
+                {activePromo.description}
+              </>
+            ) : (
+              "No promo code applied. Tap a code to see subsidised prices."
+            )}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-white/60">Quick codes:</span>
+            {quickCodes.map((code) => {
+              const active = activePromo?.code === code;
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => toggleQuickCode(code)}
+                  aria-pressed={active}
+                  className={`rounded-full px-3 py-1 font-mono text-[11px] font-bold transition-colors ${focusRing} ${active
+                      ? "bg-[#F4A942] text-[#1A1A1A]"
+                      : "border border-white/30 text-white hover:bg-white/10"
+                    }`}
+                >
+                  {code}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* 3. Main Catalogue Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        
-        {/* Category Filter Pills & Floating Basket Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-border pb-5">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                  selectedCategory === cat
-                    ? "bg-[#171A19] text-white font-bold shadow-md"
-                    : "bg-card border border-border text-muted-foreground hover:border-[#ff5500] hover:text-foreground"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+      {/* Catalogue */}
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+        <div className="mb-8">
+          <ServiceCategoryBar
+            activeCategory={selectedCategory}
+            onSelectCategory={(cat) => setSelectedCategory(cat)}
+            asLink={false}
+          />
+        </div>
 
-          {/* Trigger Basket Button */}
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-[#171A19] hover:bg-black text-white font-bold text-xs shadow-md transition-all flex-shrink-0"
+        {/* Toolbar: search, sort, basket */}
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search rice, garri, oil..."
+              aria-label="Search products"
+              className={`${inputClass} border-border pl-10`}
+            />
+          </div>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            aria-label="Sort products"
+            className={`${inputClass} border-border sm:w-52`}
           >
-            <ShoppingBag className="w-4 h-4 text-[#ff5500]" />
-            <span>Citizen Basket</span>
-            {totalCartCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-[#ff5500] text-white text-[10px] font-black">
-                {totalCartCount}
+            {sortOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className={`inline-flex flex-none items-center justify-center gap-2.5 rounded-full bg-[#1A1A1A] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-black ${focusRing}`}
+          >
+            <ShoppingBag className="h-4 w-4 text-[#F4A942]" />
+            <span>Basket</span>
+            {itemCount > 0 && (
+              <span className="rounded-full bg-[#F42D1E] px-2 py-0.5 text-[11px] font-black">
+                {itemCount}
               </span>
             )}
           </button>
         </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {filteredProducts.map((product) => {
-            // Calculate subsidized price based on active promo
-            const isCategoryEligible =
-              !activePromo?.applicableCategory ||
-              activePromo.applicableCategory === product.category;
+        {/* Category pills */}
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto border-b border-border pb-5">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              aria-pressed={selectedCategory === cat}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition-colors ${focusRing} ${selectedCategory === cat
+                  ? "bg-[#1A1A1A] text-white"
+                  : "border border-border bg-card text-muted-foreground hover:border-[#F4A942] hover:text-foreground"
+                }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
 
-            const promoDiscountPct =
-              activePromo && isCategoryEligible ? activePromo.discountPercentage : 0;
-
-            const promoSlashedPrice = Math.round(
-              product.cooperativePrice * (1 - promoDiscountPct / 100)
-            );
-
-            const totalSavedPerUnit = product.openMarketPrice - promoSlashedPrice;
-
-            return (
-              <div
-                key={product.id}
-                className="bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:border-[#ff5500]/60 hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+        <p className="mb-5 text-sm text-muted-foreground" aria-live="polite">
+          {visibleProducts.length}{" "}
+          {visibleProducts.length === 1 ? "product" : "products"}
+          {filtersActive && (
+            <>
+              {" · "}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className={`font-semibold text-foreground underline ${focusRing}`}
               >
-                <div>
-                  {/* Image with Badges */}
-                  <div className="relative w-full h-52 bg-black/5 overflow-hidden">
+                Clear filters
+              </button>
+            </>
+          )}
+        </p>
+
+        {/* Product grid */}
+        {visibleProducts.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border py-16 text-center">
+            <Search className="mx-auto h-10 w-10 text-muted-foreground" />
+            <p className="mt-3 font-bold">No products found</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Try a different word or category.
+            </p>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className={`mt-5 rounded-full bg-[#1A1A1A] px-5 py-2.5 text-sm font-bold text-white ${focusRing}`}
+            >
+              Show all products
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 lg:gap-8">
+            {visibleProducts.map((product) => {
+              const price = unitPriceFor(activePromo, product);
+              const promoPct = promoPctFor(activePromo, product);
+              const saved = Math.max(0, product.openMarketPrice - price);
+              const pctBelow =
+                product.openMarketPrice > 0
+                  ? Math.round((1 - price / product.openMarketPrice) * 100)
+                  : 0;
+              const inBasket = qtyOf(product.id);
+
+              return (
+                <article
+                  key={product.id}
+                  className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-xl"
+                >
+                  <div className="relative aspect-[4/3] bg-muted">
                     <Image
                       src={product.imageUrl}
                       alt={product.title}
                       fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                      className="object-cover"
                     />
-
-                    {/* Category Tag */}
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider">
-                        {product.category}
+                    <span className="absolute left-3 top-3 rounded-full bg-[#1A1A1A]/80 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                      {product.category}
+                    </span>
+                    {saved > 0 && (
+                      <span className="absolute bottom-3 right-3 rounded-full bg-[#F4A942] px-3 py-1 text-[11px] font-black text-[#1A1A1A] shadow-lg">
+                        Save {naira(saved)}
                       </span>
-                    </div>
-
-                    {/* Citizen Savings Ribbon */}
-                    <div className="absolute bottom-3 right-3">
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#ff5500] text-white text-[11px] font-black shadow-lg">
-                        <TrendingDown className="w-3.5 h-3.5" />
-                        <span>Save ₦{totalSavedPerUnit.toLocaleString()}</span>
-                      </span>
-                    </div>
+                    )}
                   </div>
 
-                  {/* Body Content */}
-                  <div className="p-5 sm:p-6 space-y-3">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <MapPin className="w-3 h-3 text-[#ff5500]" />
-                      <span>{product.origin}</span>
-                    </div>
-
-                    <h3 className="font-heading text-base sm:text-lg font-bold text-foreground leading-snug group-hover:text-[#ff5500] transition-colors">
+                  <div className="flex flex-1 flex-col p-5">
+                    <p className="text-xs text-muted-foreground">{product.origin}</p>
+                    <h3 className="font-heading mt-1 text-lg font-bold leading-snug">
                       {product.title}
                     </h3>
-
-                    <p className="font-body text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
                       {product.description}
                     </p>
 
-                    {/* Price Comparison Ledger */}
-                    <div className="p-3.5 rounded-2xl bg-muted/40 border border-border space-y-2 mt-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Open Market Price:</span>
-                        <span className="line-through text-red-500 font-mono font-semibold">
-                          ₦{product.openMarketPrice.toLocaleString()}
+                    <div className="mt-auto pt-5">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-heading text-2xl font-black">
+                          {naira(price)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          / {product.unit}
                         </span>
                       </div>
-
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>PITS Farm-Gate Price:</span>
-                        <span className="font-mono font-bold text-foreground">
-                          ₦{product.cooperativePrice.toLocaleString()}
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs">
+                        <span className="text-muted-foreground line-through">
+                          {naira(product.openMarketPrice)}
                         </span>
+                        {pctBelow > 0 && (
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            {pctBelow}% below market
+                          </span>
+                        )}
                       </div>
+                      {promoPct > 0 && activePromo && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Includes code {activePromo.code} (−{promoPct}%)
+                        </p>
+                      )}
 
-                      {/* With Promo Code Slashed Price */}
-                      <div className="pt-2 border-t border-border flex items-baseline justify-between">
-                        <span className="text-[11px] font-extrabold text-[#ff5500] uppercase tracking-wider flex items-center gap-1">
-                          <Percent className="w-3 h-3" />
-                          <span>With Code ({activePromo?.code || "None"}):</span>
-                        </span>
-                        <span className="text-xl sm:text-2xl font-black text-[#ff5500] font-mono">
-                          ₦{promoSlashedPrice.toLocaleString()}
-                        </span>
+                      <div className="mt-4">
+                        {inBasket === 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => addToCart(product)}
+                            className={`flex w-full items-center justify-center gap-2 rounded-full bg-[#F42D1E] py-3 text-sm font-bold text-white transition-colors hover:bg-[#D9241A] ${focusRing}`}
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span>Add to basket</span>
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                              In your basket
+                            </span>
+                            <QtyStepper
+                              value={inBasket}
+                              onChange={(q) => setQty(product.id, q)}
+                              label={product.title}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Footer Action */}
-                <div className="p-5 sm:p-6 pt-0">
-                  <button
-                    type="button"
-                    onClick={() => addToCart(product)}
-                    className="w-full py-3 rounded-full bg-[#171A19] hover:bg-[#ff5500] text-white font-bold text-xs tracking-wide shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Add to Citizen Basket</span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 4. Slide-Over Shopping Basket Drawer */}
+      {/* Floating basket bar */}
+      {itemCount > 0 && !isCartOpen && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 px-4">
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className={`pointer-events-auto mx-auto flex w-full max-w-md items-center justify-between rounded-full bg-[#1A1A1A] px-5 py-3.5 text-white shadow-2xl ring-1 ring-white/10 ${focusRing}`}
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <ShoppingBag className="h-4 w-4 text-[#F4A942]" />
+              {itemCount} {itemCount === 1 ? "item" : "items"}
+            </span>
+            <span className="text-sm font-bold">View basket · {naira(total)}</span>
+          </button>
+        </div>
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          className="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-4"
+        >
+          <span className="rounded-full bg-[#1A1A1A] px-4 py-2 text-xs font-semibold text-white shadow-lg ring-1 ring-white/10">
+            {toast}
+          </span>
+        </div>
+      )}
+
+      {/* Basket and checkout drawer */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md bg-card border-l border-border h-full flex flex-col justify-between p-6 shadow-2xl overflow-y-auto">
-            {/* Drawer Header */}
-            <div>
-              <div className="flex items-center justify-between border-b border-border pb-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-[#ff5500]" />
-                  <h3 className="font-heading font-black text-lg text-foreground">
-                    Your Subsidized Basket
-                  </h3>
-                </div>
+        <div
+          className="animate-fadeIn fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeCart();
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={step === "cart" ? "Your basket" : "Pickup details"}
+            className="flex h-full w-full max-w-md flex-col bg-card shadow-2xl"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              {step === "details" ? (
                 <button
-                  onClick={() => setIsCartOpen(false)}
-                  className="p-1.5 rounded-full hover:bg-muted text-muted-foreground"
+                  type="button"
+                  onClick={() => setStep("cart")}
+                  className={`flex items-center gap-2 text-sm font-bold ${focusRing}`}
                 >
-                  <X className="w-5 h-5" />
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to basket</span>
                 </button>
-              </div>
-
-              {/* Items List */}
-              {cart.length === 0 ? (
-                <div className="py-16 text-center space-y-3">
-                  <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto" />
-                  <p className="text-sm font-bold text-foreground">
-                    Your basket is empty
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Select staple items from the catalogue to view direct cooperative pricing.
-                  </p>
-                </div>
               ) : (
-                <div className="space-y-3 max-h-[38vh] overflow-y-auto pr-1">
-                  {cart.map((item) => (
-                    <div
-                      key={item.product.id}
-                      className="p-3.5 rounded-2xl bg-muted/30 border border-border flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-foreground truncate">
-                          {item.product.title}
-                        </h4>
-                        <div className="flex items-center gap-2 text-muted-foreground text-[11px] mt-0.5">
-                          <span className="font-mono text-[#ff5500] font-bold">
-                            ₦{item.product.cooperativePrice.toLocaleString()}
-                          </span>
-                          <span>•</span>
-                          <span>{item.product.unit}</span>
-                        </div>
-                      </div>
-
-                      {/* Quantity Controls */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateQuantity(item.product.id, -1)}
-                          className="p-1 rounded bg-muted hover:bg-muted/80 text-foreground"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="font-mono font-bold text-xs w-5 text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          className="p-1 rounded bg-muted hover:bg-muted/80 text-foreground"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => removeFromCart(item.product.id)}
-                          className="p-1 text-red-500 hover:text-red-700 ml-1"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5 text-[#F42D1E]" />
+                  <h2 className="font-heading text-lg font-black">Your basket</h2>
                 </div>
               )}
-
-              {/* Promo Code Input Inside Drawer */}
-              {cart.length > 0 && (
-                <div className="pt-4 border-t border-border mt-4 space-y-2">
-                  <label className="block text-[11px] font-bold text-foreground uppercase tracking-wider">
-                    Enter Citizen Promo Voucher
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={promoCodeInput}
-                      onChange={(e) => setPromoCodeInput(e.target.value)}
-                      placeholder="e.g. PITS2027 / RICETEST"
-                      className="flex-1 px-3 py-2 rounded-xl border border-border bg-background text-foreground text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#ff5500]"
-                    />
-                    <button
-                      onClick={() => handleApplyPromo()}
-                      className="px-4 py-2 rounded-xl bg-[#ff5500] hover:bg-[#e04b00] text-white font-bold text-xs transition"
-                    >
-                      Apply
-                    </button>
-                  </div>
-
-                  {activePromo && (
-                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium flex items-center justify-between">
-                      <span>✓ {activePromo.code}: {activePromo.discountPercentage}% Subsidized</span>
-                      <button
-                        onClick={() => setActivePromo(null)}
-                        className="text-red-500 hover:underline text-[10px]"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-
-                  {promoError && (
-                    <p className="text-[11px] text-red-500 font-medium">{promoError}</p>
-                  )}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={closeCart}
+                aria-label="Close basket"
+                autoFocus
+                className={`rounded-full p-2 text-muted-foreground hover:bg-muted ${focusRing}`}
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {/* Drawer Bottom: Order Summary & Checkout Form */}
-            {cart.length > 0 && (
-              <div className="pt-4 border-t border-border space-y-4">
-                {/* Cost Breakdown */}
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Open Market Value:</span>
-                    <span className="line-through font-mono">
-                      ₦{openMarketSubtotal.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>PITS Cooperative Baseline:</span>
-                    <span className="font-mono text-foreground font-semibold">
-                      ₦{cooperativeSubtotal.toLocaleString()}
-                    </span>
-                  </div>
-                  {activePromo && (
-                    <div className="flex justify-between text-[#ff5500] font-bold">
-                      <span>Citizen Voucher Discount ({activePromo.discountPercentage}%):</span>
-                      <span className="font-mono">-₦{discountAmount.toLocaleString()}</span>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {lines.length === 0 ? (
+                <div className="py-16 text-center">
+                  <ShoppingBag className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <p className="mt-3 font-bold">Your basket is empty</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add items from the catalogue to see your subsidised prices.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={closeCart}
+                    className={`mt-5 rounded-full bg-[#1A1A1A] px-5 py-2.5 text-sm font-bold text-white ${focusRing}`}
+                  >
+                    Keep shopping
+                  </button>
+                </div>
+              ) : step === "cart" ? (
+                <>
+                  <ul className="space-y-3">
+                    {lines.map((line) => (
+                      <li
+                        key={line.product.id}
+                        className="flex gap-3 rounded-2xl border border-border p-3"
+                      >
+                        <div className="relative h-16 w-16 flex-none overflow-hidden rounded-xl bg-muted">
+                          <Image
+                            src={line.product.imageUrl}
+                            alt=""
+                            fill
+                            sizes="64px"
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-sm font-bold">
+                                {line.product.title}
+                              </h3>
+                              <p className="text-xs text-muted-foreground">
+                                {naira(line.unitPrice)} / {line.product.unit}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setQty(line.product.id, 0)}
+                              aria-label={`Remove ${line.product.title}`}
+                              className={`rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-red-500 ${focusRing}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <QtyStepper
+                              value={line.quantity}
+                              onChange={(q) => setQty(line.product.id, q)}
+                              label={line.product.title}
+                            />
+                            <span className="text-sm font-black tabular-nums">
+                              {naira(line.lineTotal)}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Promo code */}
+                  <div className="mt-5 border-t border-border pt-4">
+                    <label htmlFor="promo" className="block text-sm font-bold">
+                      Promo code
+                    </label>
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        id="promo"
+                        type="text"
+                        value={promoInput}
+                        onChange={(e) => setPromoInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleApplyPromo();
+                          }
+                        }}
+                        placeholder="e.g. PITS2027"
+                        className={`${inputClass} border-border font-mono uppercase`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleApplyPromo()}
+                        className={`rounded-xl bg-[#1A1A1A] px-4 text-sm font-bold text-white hover:bg-black ${focusRing}`}
+                      >
+                        Apply
+                      </button>
                     </div>
-                  )}
-                  <div className="flex justify-between text-base font-black text-foreground pt-2 border-t border-border">
-                    <span>Final Payable Amount:</span>
-                    <span className="font-mono text-[#ff5500] text-lg">
-                      ₦{finalPayable.toLocaleString()}
-                    </span>
+                    {promoError && (
+                      <p role="alert" className="mt-2 text-xs font-medium text-red-500">
+                        {promoError}
+                      </p>
+                    )}
+                    {activePromo && (
+                      <div className="mt-2 flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                        <span>
+                          {activePromo.code}: {activePromo.discountPercentage}% off
+                          {activePromo.applicableCategory
+                            ? ` ${activePromo.applicableCategory} only`
+                            : ""}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setActivePromo(null)}
+                          className={`font-semibold underline ${focusRing}`}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    {promoNotUsed && activePromo && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {activePromo.code} doesn&apos;t apply to anything in your basket
+                        yet.
+                      </p>
+                    )}
                   </div>
-                </div>
-
-                {/* Savings Pill */}
-                <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold text-center">
-                  You are saving ₦{totalSavings.toLocaleString()} on this order!
-                </div>
-
-                {/* Quick Reservation Form */}
-                <form onSubmit={handleCheckout} className="space-y-3 pt-1">
+                </>
+              ) : (
+                <form id="checkout-form" onSubmit={handleCheckout} noValidate className="space-y-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-foreground mb-1">
-                      Select Your State Pickup Hub
+                    <label htmlFor="hub" className="block text-sm font-bold">
+                      Pickup hub
                     </label>
                     <select
+                      id="hub"
                       value={selectedHub}
                       onChange={(e) => setSelectedHub(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-border bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-[#ff5500]"
+                      className={`${inputClass} mt-1.5 border-border`}
                     >
-                      <option value="Lagos (Ojodu Underpass Hub)">Lagos (Ojodu Underpass Hub)</option>
-                      <option value="Abuja (Wuse Market Distribution Node)">Abuja (Wuse Market Distribution Node)</option>
-                      <option value="Ibadan (Bodija Cooperative Post)">Ibadan (Bodija Cooperative Post)</option>
-                      <option value="Kano (Dawanau Grain Center)">Kano (Dawanau Grain Center)</option>
-                      <option value="Kebbi (Argungu Pilot Mill)">Kebbi (Argungu Pilot Mill)</option>
-                      <option value="Port Harcourt (Mile 1 Node)">Port Harcourt (Mile 1 Node)</option>
+                      {hubs.map((h) => (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-bold">
+                      Full name
+                    </label>
                     <input
+                      id="name"
                       type="text"
-                      required
-                      placeholder="Your Name"
+                      autoComplete="name"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-border bg-background text-foreground text-xs"
+                      aria-invalid={!!errors.name}
+                      aria-describedby={errors.name ? "name-error" : undefined}
+                      className={`${inputClass} mt-1.5 ${errors.name ? "border-red-500" : "border-border"}`}
                     />
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Phone (+234)"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-border bg-background text-foreground text-xs"
-                    />
+                    {errors.name && (
+                      <p id="name-error" role="alert" className="mt-1 text-xs text-red-500">
+                        {errors.name}
+                      </p>
+                    )}
                   </div>
 
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-bold">
+                      Phone number
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="0803 123 4567"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      aria-invalid={!!errors.phone}
+                      aria-describedby={errors.phone ? "phone-error" : "phone-help"}
+                      className={`${inputClass} mt-1.5 ${errors.phone ? "border-red-500" : "border-border"}`}
+                    />
+                    {errors.phone ? (
+                      <p id="phone-error" role="alert" className="mt-1 text-xs text-red-500">
+                        {errors.phone}
+                      </p>
+                    ) : (
+                      <p id="phone-help" className="mt-1 text-xs text-muted-foreground">
+                        Use a number the hub can reach.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-border p-4 text-sm">
+                    <p className="font-bold">
+                      {itemCount} {itemCount === 1 ? "item" : "items"} to collect
+                    </p>
+                    <ul className="mt-2 space-y-1 text-muted-foreground">
+                      {lines.map((l) => (
+                        <li key={l.product.id} className="flex justify-between gap-3">
+                          <span className="truncate">
+                            {l.quantity} × {l.product.title}
+                          </span>
+                          <span className="tabular-nums">{naira(l.lineTotal)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      You pay at the hub when you collect your order.
+                    </p>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Footer */}
+            {lines.length > 0 && (
+              <div className="space-y-3 border-t border-border px-5 py-4">
+                <dl className="space-y-1.5 text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <dt>Cooperative price</dt>
+                    <dd className="tabular-nums">{naira(baseTotal)}</dd>
+                  </div>
+                  {discount > 0 && activePromo && (
+                    <div className="flex justify-between font-semibold text-emerald-600 dark:text-emerald-400">
+                      <dt>Promo code {activePromo.code}</dt>
+                      <dd className="tabular-nums">−{naira(discount)}</dd>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-border pt-2 text-base font-black">
+                    <dt>Total to pay at hub</dt>
+                    <dd className="tabular-nums">{naira(total)}</dd>
+                  </div>
+                </dl>
+
+                {savings > 0 && (
+                  <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-center text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                    You save {naira(savings)} compared with open-market prices
+                  </p>
+                )}
+
+                {orderError && (
+                  <p role="alert" className="text-xs font-medium text-red-500">
+                    {orderError}
+                  </p>
+                )}
+
+                {step === "cart" ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep("details")}
+                    className={`w-full rounded-full bg-[#F42D1E] py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#D9241A] ${focusRing}`}
+                  >
+                    Continue to pickup details
+                  </button>
+                ) : (
                   <button
                     type="submit"
-                    className="w-full py-3.5 rounded-full bg-gradient-to-r from-[#ff5500] to-[#e04b00] hover:to-[#c73e00] text-white font-bold text-xs tracking-wider shadow-lg hover:shadow-xl transition-all"
+                    form="checkout-form"
+                    disabled={placing}
+                    className={`flex w-full items-center justify-center gap-2 rounded-full bg-[#F42D1E] py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#D9241A] disabled:opacity-60 ${focusRing}`}
                   >
-                    Confirm Subsidized Order Reservation
+                    {placing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <span>{placing ? "Placing your order..." : "Reserve my order"}</span>
                   </button>
-                </form>
+                )}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 5. Order Confirmation Voucher Modal */}
-      {orderConfirmed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-card border border-border rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-6 text-xs">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-10 h-10" />
+      {/* Order confirmation */}
+      {placed && (
+        <div className="animate-fadeIn fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Order confirmed"
+            className="w-full max-w-md space-y-6 rounded-3xl border border-border bg-card p-6 text-center shadow-2xl sm:p-8"
+          >
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500">
+              <CheckCircle2 className="h-10 w-10" />
             </div>
 
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-500">
-                Cooperative Voucher Issued
-              </span>
-              <h3 className="font-heading font-black text-xl sm:text-2xl text-foreground">
-                Order Reserved Successfully
-              </h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Thank you, <strong>{customerName || "Citizen"}</strong>. Your subsidized food allocation has been locked in with promo code{" "}
-                <strong>{activePromo?.code || "DIRECT"}</strong>.
+            <div>
+              <h2 className="font-heading text-xl font-black sm:text-2xl">
+                Order reserved
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Thank you, <strong>{placed.name}</strong>. Your {placed.itemCount}{" "}
+                {placed.itemCount === 1 ? "item is" : "items are"} reserved
+                {placed.promo ? (
+                  <>
+                    {" "}
+                    with code <strong>{placed.promo}</strong>
+                  </>
+                ) : null}
+                . Show the order ID below at the hub.
               </p>
             </div>
 
-            {/* Voucher Card */}
-            <div className="p-5 rounded-2xl bg-muted/40 border-2 border-dashed border-border space-y-3 text-left font-mono">
-              <div className="flex justify-between border-b border-border pb-2 text-[11px]">
-                <span className="text-muted-foreground">Order ID:</span>
-                <span className="font-bold text-[#ff5500]">{orderConfirmed}</span>
+            <dl className="space-y-3 rounded-2xl border-2 border-dashed border-border bg-muted/40 p-5 text-left text-sm">
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                <dt className="text-muted-foreground">Order ID</dt>
+                <dd className="flex items-center gap-2 font-mono font-bold">
+                  {placed.code}
+                  <button
+                    type="button"
+                    onClick={copyOrderCode}
+                    aria-label="Copy order ID"
+                    className={`rounded-full p-1.5 hover:bg-muted ${focusRing}`}
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </dd>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Pickup Hub:</span>
-                <span className="font-bold text-foreground text-right">{selectedHub}</span>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Pickup hub</dt>
+                <dd className="text-right font-semibold">{placed.hub}</dd>
               </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-muted-foreground">Amount to Pay at Hub:</span>
-                <span className="font-bold text-[#ff5500]">₦{finalPayable.toLocaleString()}</span>
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted-foreground">Pay at the hub</dt>
+                <dd className="font-black">{naira(placed.total)}</dd>
               </div>
+            </dl>
 
-              {/* Barcode representation */}
-              <div className="pt-2 text-center text-muted-foreground text-[10px] tracking-widest">
-                |||||| | |||| |||||| || ||||| |||
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <button
-                onClick={() => setOrderConfirmed(null)}
-                className="w-full py-3 rounded-full bg-[#171A19] text-white hover:bg-black font-bold text-xs"
+                type="button"
+                onClick={() => setPlaced(null)}
+                className={`w-full rounded-full bg-[#1A1A1A] py-3 text-sm font-bold text-white hover:bg-black ${focusRing}`}
               >
-                Done & Return to Food Hub
+                Back to the food hub
               </button>
-              <Link
-                href="/portal"
-                className="text-xs font-semibold text-[#ff5500] hover:underline"
-              >
-                View in Member Portal →
-              </Link>
+              {user && (
+                <Link
+                  href="/portal"
+                  className={`text-sm font-semibold text-[#F42D1E] hover:underline ${focusRing}`}
+                >
+                  View in member portal
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -199,6 +199,41 @@ CREATE TABLE IF NOT EXISTS public.partners (
 );
 
 
+-- 10. PEOPLE'S VOICE: COMMUNITY POSTS (Ideas, Stories, Issues, Solutions, Campaigns)
+CREATE TABLE IF NOT EXISTS public.peoples_voice_posts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  author_name TEXT NOT NULL,
+  author_state TEXT NOT NULL,
+  author_role TEXT NOT NULL DEFAULT 'Citizen Voice',
+  category TEXT NOT NULL CHECK (category IN ('Idea', 'Story', 'Issue', 'Solution', 'Campaign')),
+  content TEXT NOT NULL,
+  likes_count INTEGER NOT NULL DEFAULT 0,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+
+-- 11. PEOPLE'S VOICE: THREADED COMMENTS
+CREATE TABLE IF NOT EXISTS public.peoples_voice_comments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  post_id UUID NOT NULL REFERENCES public.peoples_voice_posts(id) ON DELETE CASCADE,
+  author_name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+
+-- 12. PEOPLE'S VOICE: CITIZEN LIKES (Prevent duplicate likes)
+CREATE TABLE IF NOT EXISTS public.peoples_voice_likes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  post_id UUID NOT NULL REFERENCES public.peoples_voice_posts(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT unique_post_like UNIQUE (post_id, user_id)
+);
+
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
@@ -212,6 +247,34 @@ ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.volunteers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.peoples_voice_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.peoples_voice_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.peoples_voice_likes ENABLE ROW LEVEL SECURITY;
+
+-- 0. People's Voice Policies
+CREATE POLICY "Voice posts viewable by everyone"
+  ON public.peoples_voice_posts FOR SELECT
+  USING (true);
+
+CREATE POLICY "Anyone can publish a voice post"
+  ON public.peoples_voice_posts FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Comments viewable by everyone"
+  ON public.peoples_voice_comments FOR SELECT
+  USING (true);
+
+CREATE POLICY "Anyone can post a comment"
+  ON public.peoples_voice_comments FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Likes viewable by everyone"
+  ON public.peoples_voice_likes FOR SELECT
+  USING (true);
+
+CREATE POLICY "Anyone can like a post"
+  ON public.peoples_voice_likes FOR INSERT
+  WITH CHECK (true);
 
 -- 1. Profiles Policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -536,3 +599,342 @@ VALUES
     NULL
   )
 ON CONFLICT (tracking_id) DO NOTHING;
+
+
+-- Seed People's Voice Posts
+INSERT INTO public.peoples_voice_posts (author_name, author_state, author_role, category, content, likes_count)
+VALUES
+  (
+    'Dabiraoluwa Honey.A',
+    'Lagos',
+    'National Coordinator',
+    'Campaign',
+    'We are not here to talk about what could happen in 2027. We are proving what is possible right now with The Rice Test and community food hubs. If you have an idea for a direct farmer-to-consumer route in your ward, write it below.',
+    142
+  ),
+  (
+    'Dr. Kemi Adeyemi',
+    'Oyo',
+    'Health Volunteer',
+    'Solution',
+    'Recommendation: Let every ward set up a community medical emergency kitty. When a neighbor needs urgent antivenom or malaria drips at night, we should not wait for state bureaucracy. We can fund it collectively through our cooperative hubs.',
+    89
+  ),
+  (
+    'Ibrahim Mohammed',
+    'Kaduna',
+    'Youth Vanguard',
+    'Story',
+    'Yesterday at Zaria market, grain cartels tried to intimidate local women buying subsidized cooperative bags. Our youth monitors stood peacefully with them and made sure every mother left with her grain at farm-gate cost. Power is truly in the street.',
+    215
+  ),
+  (
+    'Blessing Nwachukwu',
+    'Enugu',
+    'Citizen Voice',
+    'Idea',
+    'Can we introduce student data pooling for public university students preparing for semester exams? High data costs are blocking hundreds of smart students from accessing online academic journals.',
+    64
+  );
+
+
+-- ============================================================
+-- 13. LGA REGISTRATIONS & COMMUNITY BALLOTING
+-- ============================================================
+CREATE TABLE IF NOT EXISTS lga_registrations (
+  id            uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name     text        NOT NULL,
+  phone         text        NOT NULL,
+  email         text,
+  lga           text        NOT NULL,
+  ward          text,
+  primary_need  text        NOT NULL DEFAULT 'Other',
+  registered_at timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_lga_reg_lga  ON lga_registrations(lga);
+CREATE INDEX IF NOT EXISTS idx_lga_reg_date ON lga_registrations(registered_at);
+
+ALTER TABLE lga_registrations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_insert_lga" ON lga_registrations;
+CREATE POLICY "public_can_insert_lga"
+  ON lga_registrations FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "authenticated_can_read_lga" ON lga_registrations;
+CREATE POLICY "authenticated_can_read_lga"
+  ON lga_registrations FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE OR REPLACE FUNCTION get_lga_counts()
+RETURNS TABLE (lga text, count bigint)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT lga, COUNT(*) AS count
+  FROM lga_registrations
+  GROUP BY lga
+  ORDER BY count DESC;
+$$;
+
+CREATE OR REPLACE FUNCTION get_lga_growth()
+RETURNS TABLE (date date, count bigint)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT DATE(registered_at) AS date, COUNT(*) AS count
+  FROM lga_registrations
+  WHERE registered_at >= NOW() - INTERVAL '30 days'
+  GROUP BY DATE(registered_at)
+  ORDER BY date ASC;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_lga_counts() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION get_lga_growth() TO anon, authenticated;
+
+
+-- ============================================================
+-- 14. MULTI-VENDOR MARKETPLACE & PAID MEMBERSHIP CLUB
+-- ============================================================
+
+-- Vendors / Merchant Stores
+CREATE TABLE IF NOT EXISTS vendors (
+  id              uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  store_name      text        NOT NULL,
+  owner_name      text        NOT NULL,
+  whatsapp        text        NOT NULL,
+  email           text,
+  state           text        DEFAULT 'Lagos',
+  lga             text,
+  address         text,
+  category        text        DEFAULT 'General Store',
+  is_verified     boolean     DEFAULT true,
+  created_at      timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_vendors_whatsapp ON vendors(whatsapp);
+ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_read_vendors" ON vendors;
+CREATE POLICY "public_can_read_vendors"
+  ON vendors FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "public_can_insert_vendors" ON vendors;
+CREATE POLICY "public_can_insert_vendors"
+  ON vendors FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "vendors_can_update_own" ON vendors;
+CREATE POLICY "vendors_can_update_own"
+  ON vendors FOR UPDATE
+  USING (true);
+
+-- Vendor Products (extends marketplace)
+CREATE TABLE IF NOT EXISTS vendor_products (
+  id                uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  vendor_id         uuid        REFERENCES vendors(id) ON DELETE CASCADE,
+  title             text        NOT NULL,
+  category          text        NOT NULL,
+  retail_price      numeric     NOT NULL, -- Normal visitor price
+  member_price      numeric     NOT NULL, -- Discounted member price (e.g. 35-50% off)
+  unit              text        DEFAULT 'Piece',
+  image_url         text        NOT NULL,
+  description       text,
+  in_stock          boolean     DEFAULT true,
+  stock_count       integer     DEFAULT 50,
+  pickup_hubs       text[]      DEFAULT ARRAY['Pickup Available'],
+  created_at        timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_vendor_products_vendor ON vendor_products(vendor_id);
+ALTER TABLE vendor_products ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_read_vendor_products" ON vendor_products;
+CREATE POLICY "public_can_read_vendor_products"
+  ON vendor_products FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "public_can_insert_vendor_products" ON vendor_products;
+CREATE POLICY "public_can_insert_vendor_products"
+  ON vendor_products FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "public_can_update_vendor_products" ON vendor_products;
+CREATE POLICY "public_can_update_vendor_products"
+  ON vendor_products FOR UPDATE
+  USING (true);
+
+-- Paid Memberships (₦3,200 Registration + Phone-bound Promo Code)
+CREATE TABLE IF NOT EXISTS paid_memberships (
+  id                uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name         text        NOT NULL,
+  phone             text        NOT NULL UNIQUE, -- Promo code is tied directly to this phone
+  email             text,
+  state             text        DEFAULT 'Lagos',
+  lga               text,
+  promo_code        text        UNIQUE, -- e.g. PITS-7829-MEMBER
+  payment_status    text        DEFAULT 'pending' CHECK (payment_status IN ('pending', 'verified', 'rejected')),
+  amount_paid       numeric     DEFAULT 3200 NOT NULL,
+  proof_reference   text,       -- Bank transfer reference or payer bank name
+  proof_image_url   text,       -- Uploaded receipt / screenshot if available
+  verified_at       timestamptz,
+  created_at        timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_memberships_phone ON paid_memberships(phone);
+CREATE INDEX IF NOT EXISTS idx_memberships_code  ON paid_memberships(promo_code);
+
+ALTER TABLE paid_memberships ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_insert_memberships" ON paid_memberships;
+CREATE POLICY "public_can_insert_memberships"
+  ON paid_memberships FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "public_can_check_own_membership" ON paid_memberships;
+CREATE POLICY "public_can_check_own_membership"
+  ON paid_memberships FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "admin_can_update_memberships" ON paid_memberships;
+CREATE POLICY "admin_can_update_memberships"
+  ON paid_memberships FOR UPDATE
+  USING (true);
+
+-- Seed initial default vendor (Amvora Central Food Hub)
+INSERT INTO vendors (id, store_name, owner_name, whatsapp, email, state, lga, category, is_verified)
+VALUES (
+  'a0000000-0000-0000-0000-000000000001',
+  'Amvora Central Hub & Cooperative Millers',
+  'Amvora Light Foundation',
+  '2348168850257',
+  'moremillionvoices@gmail.com',
+  'Lagos',
+  'Ikeja',
+  'Grains & Staples',
+  true
+) ON CONFLICT DO NOTHING;
+
+
+-- ============================================================
+-- 15. REFER & EARN POINT REWARD & BANK WITHDRAWAL ENGINE
+-- ============================================================
+
+-- Referrals table
+CREATE TABLE IF NOT EXISTS member_referrals (
+  id              uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  referrer_phone  text        NOT NULL, -- Referrer's phone (which is their referral code)
+  referred_name   text        NOT NULL,
+  referred_phone  text        NOT NULL UNIQUE,
+  points_awarded  integer     DEFAULT 15 NOT NULL,
+  status          text        DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed')),
+  created_at      timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON member_referrals(referrer_phone);
+ALTER TABLE member_referrals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_insert_referrals" ON member_referrals;
+CREATE POLICY "public_can_insert_referrals"
+  ON member_referrals FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "public_can_read_referrals" ON member_referrals;
+CREATE POLICY "public_can_read_referrals"
+  ON member_referrals FOR SELECT
+  USING (true);
+
+-- Bank Cashout & Withdrawal Requests (Minimum 3,000 pts / ₦3,000 threshold)
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+  id              uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  member_phone    text        NOT NULL,
+  member_name     text        NOT NULL,
+  bank_name       text        NOT NULL,
+  account_number  text        NOT NULL,
+  account_name    text        NOT NULL,
+  points_redeemed integer     NOT NULL,
+  naira_amount    numeric     NOT NULL,
+  status          text        DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'declined')),
+  admin_notes     text,
+  paid_at         timestamptz,
+  created_at      timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_withdrawals_phone ON withdrawal_requests(member_phone);
+ALTER TABLE withdrawal_requests ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_insert_withdrawals" ON withdrawal_requests;
+CREATE POLICY "public_can_insert_withdrawals"
+  ON withdrawal_requests FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "public_can_read_withdrawals" ON withdrawal_requests;
+CREATE POLICY "public_can_read_withdrawals"
+  ON withdrawal_requests FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "admin_can_update_withdrawals" ON withdrawal_requests;
+CREATE POLICY "admin_can_update_withdrawals"
+  ON withdrawal_requests FOR UPDATE
+  USING (true);
+
+-- Helper RPC: get user referral points summary
+CREATE OR REPLACE FUNCTION get_member_wallet_summary(phone_param text)
+RETURNS TABLE (
+  total_referrals bigint,
+  total_points bigint,
+  withdrawn_amount numeric,
+  pending_withdrawal numeric
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    (SELECT COUNT(*) FROM member_referrals WHERE referrer_phone = phone_param) AS total_referrals,
+    (SELECT COALESCE(SUM(points_awarded), 0) FROM member_referrals WHERE referrer_phone = phone_param AND status = 'confirmed') AS total_points,
+    (SELECT COALESCE(SUM(naira_amount), 0) FROM withdrawal_requests WHERE member_phone = phone_param AND status = 'paid') AS withdrawn_amount,
+    (SELECT COALESCE(SUM(naira_amount), 0) FROM withdrawal_requests WHERE member_phone = phone_param AND status = 'pending') AS pending_withdrawal;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_member_wallet_summary(text) TO anon, authenticated;
+
+
+-- ============================================================
+-- 16. MOVEMENT SUPPORTERS & CITIZEN NETWORK (JOIN THE MOVEMENT)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.movement_members (
+  id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name   text        NOT NULL,
+  phone       text        NOT NULL,
+  email       text,
+  state       text        DEFAULT 'Lagos',
+  joined_at   timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_movement_phone ON public.movement_members(phone);
+CREATE INDEX IF NOT EXISTS idx_movement_date  ON public.movement_members(joined_at);
+
+ALTER TABLE public.movement_members ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "public_can_insert_movement" ON public.movement_members;
+CREATE POLICY "public_can_insert_movement"
+  ON public.movement_members FOR INSERT
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "public_can_read_movement" ON public.movement_members;
+CREATE POLICY "public_can_read_movement"
+  ON public.movement_members FOR SELECT
+  USING (true);
+
+CREATE OR REPLACE FUNCTION get_movement_member_count()
+RETURNS bigint
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT COUNT(*) FROM public.movement_members;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_movement_member_count() TO anon, authenticated;

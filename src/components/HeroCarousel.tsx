@@ -1,249 +1,216 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { HERO_SLIDES } from "@/content/campaign";
-import { ChevronLeft, ChevronRight, ArrowRight, Sparkles, ShieldCheck, CheckCircle2 } from "lucide-react";
-import gsap from "gsap";
+import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
+import { BRAND_INFO, HERO_SLIDES } from "@/content/campaign";
+
+/*
+  Amvora Light brand colours (sampled from the logo, confirm exact hex with the designer)
+  ink    #1A1A1A   logo black, used for overlays
+  flame  #F42D1E   logo red, used for the main button and the final phase
+  amber  #F4A942   logo gold, used for rules, progress and small accents
+*/
+
+const SLIDE_MS = 7000; // time each slide stays on screen
+const TOTAL = HERO_SLIDES.length;
+
+// "Days 8–20" -> 13, so each phase is drawn in proportion to its length
+function phaseLength(duration: string) {
+  const m = duration.match(/(\d+)\D+(\d+)/);
+  return m ? Number(m[2]) - Number(m[1]) + 1 : 1;
+}
+
+const PHASES = BRAND_INFO.executionPhases.map((p) => ({
+  ...p,
+  days: phaseLength(p.duration),
+}));
+
+const pad = (n: number) => String(n).padStart(2, "0");
 
 export function HeroCarousel() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const bgImageRef = useRef<HTMLDivElement>(null);
-  const textContentRef = useRef<HTMLDivElement>(null);
-  const sideCardRef = useRef<HTMLDivElement>(null);
+  const [current, setCurrent] = useState(0);
+  const [hovering, setHovering] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
+  const paused = hovering || userPaused;
 
-  // Auto-advance slides every 3 seconds unless user pauses/hovers
-  useEffect(() => {
-    if (isPaused) return;
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [isPaused]);
+  const slide = HERO_SLIDES[current];
+  const next = () => setCurrent((c) => (c + 1) % TOTAL);
+  const prev = () => setCurrent((c) => (c - 1 + TOTAL) % TOTAL);
 
-  // GSAP animation triggered upon slide change
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      // Background Image smooth scale & reveal
-      if (bgImageRef.current) {
-        gsap.fromTo(
-          bgImageRef.current,
-          { scale: 1.05, opacity: 0.8 },
-          { scale: 1, opacity: 1, duration: 1.1, ease: "power2.out" }
-        );
-      }
-
-      // Animate text elements with stagger
-      const textElements = textContentRef.current?.querySelectorAll(".gsap-text");
-      if (textElements && textElements.length > 0) {
-        gsap.fromTo(
-          textElements,
-          { opacity: 0, y: 20 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.6,
-            stagger: 0.07,
-            ease: "power3.out",
-          }
-        );
-      }
-
-      // Animate side card
-      if (sideCardRef.current) {
-        gsap.fromTo(
-          sideCardRef.current,
-          { opacity: 0, x: 20, scale: 0.97 },
-          { opacity: 1, x: 0, scale: 1, duration: 0.7, ease: "power2.out", delay: 0.1 }
-        );
-      }
-    }, containerRef);
-
-    return () => ctx.revert();
-  }, [currentSlide]);
-
-  const slide = HERO_SLIDES[currentSlide];
+  const focusRing =
+    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F4A942]";
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full overflow-hidden select-none min-h-[460px] lg:min-h-[520px] flex items-center border-b border-white/10"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={() => setIsPaused(true)}
-      onTouchEnd={() => setIsPaused(false)}
+    <section
+      aria-roledescription="carousel"
+      aria-label="Campaign highlights"
+      className="relative isolate flex min-h-[640px] w-full flex-col overflow-hidden bg-[#1A1A1A] text-white lg:min-h-[720px]"
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      onFocus={() => setHovering(true)}
+      onBlur={() => setHovering(false)}
+      onTouchStart={() => setHovering(true)}
+      onTouchEnd={() => setHovering(false)}
     >
-      {/* 1. Full-Bleed Background Image (High Visibility with Lighter Backdrop) */}
-      <div ref={bgImageRef} className="absolute inset-0 w-full h-full pointer-events-none">
-        <Image
-          src={slide.image}
-          alt={slide.title}
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center brightness-105"
-        />
+      <style>{`
+        @keyframes pits-progress { from { width: 0% } to { width: 100% } }
+        @keyframes pits-rise {
+          from { opacity: 0; transform: translateY(16px) }
+          to { opacity: 1; transform: none }
+        }
+        .pits-progress { animation-name: pits-progress; animation-timing-function: linear; animation-fill-mode: forwards; }
+        .pits-rise > * { animation: pits-rise .7s cubic-bezier(.2,.7,.2,1) both; }
+        .pits-rise > *:nth-child(2) { animation-delay: .08s }
+        .pits-rise > *:nth-child(3) { animation-delay: .16s }
+        .pits-rise > *:nth-child(4) { animation-delay: .24s }
+        @media (prefers-reduced-motion: reduce) {
+          .pits-rise > * { animation: none }
+          .pits-progress { animation: none; width: 0% }
+        }
+      `}</style>
 
-        {/* Lightweight translucent overlay so the photo is clearly visible */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/20" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#171A19]/80 via-transparent to-black/35" />
+      {/* Photos: all slides stacked, cross-fading */}
+      <div className="absolute inset-0 -z-10" aria-hidden="true">
+        {HERO_SLIDES.map((s, i) => (
+          <Image
+            key={s.id}
+            src={s.image}
+            alt=""
+            fill
+            priority={i === 0}
+            sizes="100vw"
+            className={`object-cover object-center transition-opacity duration-1000 ${i === current ? "opacity-100" : "opacity-0"
+              }`}
+          />
+        ))}
+        {/* Keeps the text readable on any photo: even tint on mobile, left-to-right fade on desktop */}
+        <div className="absolute inset-0 bg-[#1A1A1A]/70 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#1A1A1A]/95 lg:via-[#1A1A1A]/65 lg:to-[#1A1A1A]/10" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#1A1A1A]/80 to-transparent" />
       </div>
 
-      {/* 2. Compact Content Container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12 relative z-10 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
-          
-          {/* Left: Text & Action Controls */}
-          <div ref={textContentRef} className="lg:col-span-7 space-y-3 sm:space-y-4">
-            
-            {/* Main Title with Sharp Drop Shadow for Crisp Legibility */}
-            <h1 className="gsap-text font-heading text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white leading-[1.15] drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
-              {slide.title} <br className="hidden sm:inline" />
-              <span className="text-[#E85D04] drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-                {slide.highlight}
-              </span>
-            </h1>
+      {/* Message */}
+      <div className="mx-auto flex w-full max-w-7xl flex-1 items-center px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+        <div
+          key={slide.id}
+          className="pits-rise max-w-3xl"
+          aria-live={paused ? "polite" : "off"}
+        >
+          <h1 className="font-heading leading-[1.03] tracking-tight [text-wrap:balance]">
+            <span className="block text-3xl font-light text-white/80 sm:text-5xl lg:text-6xl">
+              {slide.title}
+            </span>
+            <span className="mt-2 block text-4xl font-black text-white sm:text-6xl lg:text-[5.25rem]">
+              {slide.highlight}
+            </span>
+          </h1>
 
-            {/* Subtitle */}
-            <p className="gsap-text font-body text-xs sm:text-sm md:text-base text-white/95 leading-relaxed font-medium max-w-2xl drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]">
-              {slide.subtitle}
-            </p>
+          <p className="mt-6 max-w-xl text-base leading-relaxed text-white/85 lg:text-lg">
+            {slide.subtitle}
+          </p>
 
-            {/* Philosophy Quote in Sleek Frosted Box */}
-            {slide.quote && (
-              <div className="gsap-text p-3 sm:p-3.5 rounded-xl bg-black/50 backdrop-blur-md border-l-4 border-[#E85D04] border-t border-r border-b border-white/15 max-w-xl shadow-lg">
-                <p className="font-heading text-xs sm:text-sm font-semibold text-white italic drop-shadow-sm">
-                  {slide.quote}
-                </p>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#E85D04] uppercase tracking-wider mt-1.5">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>{slide.tagline}</span>
-                </div>
-              </div>
-            )}
+          {slide.quote && (
+            <blockquote className="mt-6 hidden max-w-lg border-l-2 border-[#F4A942] pl-4 text-sm italic leading-relaxed text-white/70 sm:block">
+              {slide.quote}
+            </blockquote>
+          )}
 
-            {/* Responsive Call-to-Action Buttons */}
-            <div className="gsap-text pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <Link
-                href={slide.primaryCtaLink}
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-bold rounded-full bg-[#E85D04] hover:bg-[#D04D00] text-white transition-all duration-200 shadow-md hover:scale-[1.02] active:scale-[0.98] text-center"
-              >
-                <span>{slide.primaryCtaText}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-
-              <Link
-                href={slide.secondaryCtaLink}
-                className="inline-flex items-center justify-center px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/25 text-white transition-all text-center hover:border-white/40"
-              >
-                {slide.secondaryCtaText}
-              </Link>
-            </div>
-          </div>
-
-          {/* Right: Compact Frosted Scorecard */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div
-              ref={sideCardRef}
-              className="w-full max-w-sm bg-black/50 backdrop-blur-xl border border-white/20 rounded-2xl p-4 sm:p-5 shadow-[0_20px_50px_rgba(0,0,0,0.7)] text-white space-y-3.5"
+          <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
+            <Link
+              href={slide.primaryCtaLink}
+              className={`inline-flex items-center justify-center rounded-full bg-[#F42D1E] px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-[#F42D1E]/30 transition-colors hover:bg-[#D9241A] ${focusRing}`}
             >
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-white p-0.5 border border-[#E85D04]">
-                    <Image src="/logo.jpg" alt="Logo" width={30} height={30} className="object-contain" />
-                  </div>
-                  <div>
-                    <h4 className="font-heading font-black text-[11px] text-white uppercase tracking-wider">
-                      60-Day Proof Ledger
-                    </h4>
-                    <p className="text-[9px] text-white/70">
-                      Standard of Evidence
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-xs">
-                <div className="flex items-start gap-2 text-white/95">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <strong className="text-white block font-heading text-[11px]">Empirical Field Pilots</strong>
-                    <span className="text-[10px] text-white/80">
-                      Direct rice hub, mobility corridor subsidies, verifiable data mesh.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2 text-white/95">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <strong className="text-white block font-heading text-[11px]">Zero Campaign Gimmicks</strong>
-                    <span className="text-[10px] text-white/80">
-                      Every pilot operates with an open public scorecard.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-2.5 border-t border-white/10 flex items-center justify-end text-[10px]">
-                <Link
-                  href="/campaigns/60-day-proof-of-work"
-                  className="text-[#E85D04] font-bold hover:underline flex items-center gap-1"
-                >
-                  <span>Explore Tests</span>
-                  <ArrowRight className="w-2.5 h-2.5" />
-                </Link>
-              </div>
-            </div>
+              {slide.primaryCtaText}
+            </Link>
+            <Link
+              href={slide.secondaryCtaLink}
+              className={`inline-flex items-center justify-center rounded-full border border-white/40 px-7 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 ${focusRing}`}
+            >
+              {slide.secondaryCtaText}
+            </Link>
           </div>
         </div>
+      </div>
 
-        {/* 3. Compact Bottom Carousel Controls */}
-        <div className="pt-5 sm:pt-6 flex items-center justify-between border-t border-white/15 mt-5 sm:mt-6">
-          {/* Progress Indicator Dots */}
-          <div className="flex items-center gap-1.5">
-            {HERO_SLIDES.map((s, idx) => (
+      {/* Dock: slide controls on the left, the 60-day plan on the right */}
+      <div className="border-t border-white/10 bg-[#1A1A1A]/60 backdrop-blur-md">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[320px_1fr] lg:gap-12 lg:px-8">
+          {/* Slide controls */}
+          <div>
+            <div className="flex items-center gap-3">
               <button
-                key={s.id}
-                onClick={() => setCurrentSlide(idx)}
-                className={`transition-all duration-300 rounded-full h-2 ${
-                  idx === currentSlide
-                    ? "w-7 sm:w-10 bg-[#E85D04]"
-                    : "w-2 bg-white/40 hover:bg-white/70"
-                }`}
-                aria-label={`Go to slide ${idx + 1}`}
-              />
-            ))}
+                onClick={prev}
+                aria-label="Previous slide"
+                className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/30 transition-colors hover:bg-white hover:text-[#1A1A1A] ${focusRing}`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={next}
+                aria-label="Next slide"
+                className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/30 transition-colors hover:bg-white hover:text-[#1A1A1A] ${focusRing}`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setUserPaused((p) => !p)}
+                aria-label={userPaused ? "Play slideshow" : "Pause slideshow"}
+                className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/30 transition-colors hover:bg-white hover:text-[#1A1A1A] ${focusRing}`}
+              >
+                {userPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+              </button>
+              <span className="font-heading text-sm tabular-nums text-white">
+                {pad(current + 1)}
+                <span className="text-white/40"> / {pad(TOTAL)}</span>
+              </span>
+              {/* Time until next slide. Its animation ending is what advances the slide. */}
+              <div className="relative h-0.5 flex-1 overflow-hidden bg-white/20">
+                <span
+                  key={slide.id}
+                  onAnimationEnd={next}
+                  className="pits-progress absolute inset-y-0 left-0 bg-[#F4A942]"
+                  style={{
+                    animationDuration: `${SLIDE_MS}ms`,
+                    animationPlayState: paused ? "paused" : "running",
+                  }}
+                />
+              </div>
+            </div>
+            <p className="mt-3 line-clamp-2 text-xs leading-snug text-white/60">
+              {slide.badge}
+            </p>
           </div>
 
-          {/* Navigation Arrows */}
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() =>
-                setCurrentSlide((prev) =>
-                  prev === 0 ? HERO_SLIDES.length - 1 : prev - 1
-                )
-              }
-              className="p-2 rounded-full border border-white/20 bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-all active:scale-95"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() =>
-                setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)
-              }
-              className="p-2 rounded-full border border-white/20 bg-black/40 hover:bg-black/60 text-white backdrop-blur-md transition-all active:scale-95"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+          {/* The 60-day plan, each phase drawn in proportion to its length */}
+          <div>
+            <p className="mb-2 text-xs font-semibold text-white/80">
+              {BRAND_INFO.coreArchitecture}
+            </p>
+            <ol className="flex gap-1.5" aria-label="The 60-day plan">
+              {PHASES.map((p, i) => (
+                <li
+                  key={p.phase}
+                  title={`${p.phase}: ${p.duration}. ${p.focus}`}
+                  className="min-w-0 sm:min-w-[4.5rem]"
+                  style={{ flex: `${p.days} 1 0%` }}
+                >
+                  <span
+                    className={`block h-1 rounded-full ${i === PHASES.length - 1 ? "bg-[#F42D1E]" : "bg-[#F4A942]"
+                      }`}
+                  />
+                  <span className="sr-only sm:not-sr-only sm:mt-2 sm:block sm:truncate sm:text-xs sm:font-semibold sm:text-white">
+                    {p.phase}
+                  </span>
+                  <span className="sr-only sm:not-sr-only sm:block sm:truncate sm:text-[11px] sm:text-white/55">
+                    {p.duration}
+                  </span>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

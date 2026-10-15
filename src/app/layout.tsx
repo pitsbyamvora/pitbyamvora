@@ -63,10 +63,21 @@ export default function RootLayout({
       lang="en-NG"
       className={`${sora.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground font-body">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-body relative">
+        {/* Fixed Ambient Logo Watermark for scrolling illusion vibe */}
+        <div 
+          className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center overflow-hidden"
+          aria-hidden="true"
+        >
+          <div 
+            className="w-[320px] h-[320px] sm:w-[500px] sm:h-[500px] md:w-[650px] md:h-[650px] lg:w-[800px] lg:h-[800px] rounded-full opacity-[0.035] dark:opacity-[0.05] bg-center bg-no-repeat bg-contain filter grayscale contrast-125 select-none"
+            style={{ backgroundImage: "url('/logo.jpg')" }}
+          />
+        </div>
+
         <AuthProvider>
           <Header />
-          <div className="flex-1 flex flex-col">{children}</div>
+          <div className="flex-1 flex flex-col relative z-10">{children}</div>
           <Footer />
         </AuthProvider>
       </body>

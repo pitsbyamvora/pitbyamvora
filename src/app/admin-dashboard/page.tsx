@@ -7,7 +7,19 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { INITIAL_ISSUES, INITIAL_PETITIONS, CommunityIssue, Petition } from "@/content/community";
 import { MARKETPLACE_PRODUCTS, VERIFIED_PROMO_CODES, MarketplaceProduct } from "@/content/marketplace";
-import { fetchCommunityIssues, fetchPetitions, fetchMarketplaceProducts } from "@/lib/db";
+import {
+  fetchCommunityIssues,
+  fetchPetitions,
+  fetchMarketplaceProducts,
+  fetchAllPaidMemberships,
+  approvePaidMembership,
+  PaidMembership,
+  fetchAllWithdrawalRequests,
+  markWithdrawalAsPaid,
+  WithdrawalRequest,
+  fetchAllMovementMembers,
+  MovementMember,
+} from "@/lib/db";
 import { NIGERIAN_STATES } from "@/types/auth";
 import {
   ShieldAlert,
@@ -29,14 +41,27 @@ import {
   Tag,
   Eye,
   Check,
+  CreditCard,
+  Coins,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, signOut, demoSignIn } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"incidents" | "petitions" | "marketplace" | "coordinators">("incidents");
+  const [activeTab, setActiveTab] = useState<"movement" | "memberships" | "withdrawals" | "incidents" | "petitions" | "marketplace" | "coordinators">("movement");
   
+  // Movement Supporters State
+  const [movementSupporters, setMovementSupporters] = useState<MovementMember[]>([]);
+
+  // Paid Memberships State
+  const [memberships, setMemberships] = useState<PaidMembership[]>([]);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Withdrawals Cashout State
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [payingId, setPayingId] = useState<string | null>(null);
+
   // Incidents state
   const [issuesList, setIssuesList] = useState<CommunityIssue[]>(INITIAL_ISSUES);
   const [issueFilterState, setIssueFilterState] = useState("All");
@@ -49,7 +74,28 @@ export default function AdminDashboardPage() {
   // Marketplace state
   const [productsList, setProductsList] = useState<MarketplaceProduct[]>(MARKETPLACE_PRODUCTS);
 
+  const loadMovement = () => {
+    fetchAllMovementMembers().then((data) => {
+      if (data) setMovementSupporters(data);
+    });
+  };
+
+  const loadMemberships = () => {
+    fetchAllPaidMemberships().then((data) => {
+      if (data) setMemberships(data);
+    });
+  };
+
+  const loadWithdrawals = () => {
+    fetchAllWithdrawalRequests().then((data) => {
+      if (data) setWithdrawals(data);
+    });
+  };
+
   useEffect(() => {
+    loadMovement();
+    loadMemberships();
+    loadWithdrawals();
     fetchCommunityIssues().then((data) => {
       if (data && data.length > 0) setIssuesList(data);
     });
@@ -201,6 +247,42 @@ export default function AdminDashboardPage() {
         {/* Navigation Tabs for Administrative Desks */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-white/10">
           <button
+            onClick={() => setActiveTab("movement")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition whitespace-nowrap ${
+              activeTab === "movement"
+                ? "bg-[#E85D04] text-white shadow-lg"
+                : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Movement Network ({movementSupporters.length} Joined)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("memberships")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition whitespace-nowrap ${
+              activeTab === "memberships"
+                ? "bg-[#E85D04] text-white shadow-lg"
+                : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>₦3,200 Paid Memberships ({memberships.filter((m) => m.paymentStatus === "pending").length} Pending)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("withdrawals")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition whitespace-nowrap ${
+              activeTab === "withdrawals"
+                ? "bg-[#E85D04] text-white shadow-lg"
+                : "bg-white/5 text-white/70 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <Coins className="w-4 h-4" />
+            <span>Bank Cashouts ({withdrawals.filter((w) => w.status === "pending").length} Pending)</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("incidents")}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold transition whitespace-nowrap ${
               activeTab === "incidents"
@@ -248,6 +330,240 @@ export default function AdminDashboardPage() {
             <span>Ward Coordinators & RBAC</span>
           </button>
         </div>
+
+        {/* TAB: MOVEMENT NETWORK SUPPORTERS DESK */}
+        {activeTab === "movement" && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-heading font-black text-xl text-white">
+                  Citizen Movement Network ({movementSupporters.length} Joined)
+                </h3>
+                <p className="text-xs text-white/60">
+                  Real-time registry of everyday Nigerians who joined the civic solidarity movement.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadMovement}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs"
+              >
+                Refresh Supporters
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {movementSupporters.length === 0 ? (
+                <div className="p-8 rounded-2xl bg-[#171a19] border border-white/10 text-center text-white/60 text-xs">
+                  No movement supporters registered yet.
+                </div>
+              ) : (
+                movementSupporters.map((supporter, index) => (
+                  <div
+                    key={supporter.id || index}
+                    className="p-5 rounded-2xl bg-[#171a19] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{supporter.fullName}</span>
+                        <span className="font-mono text-xs text-[#E85D04] font-bold">({supporter.phone})</span>
+                        {supporter.email && (
+                          <span className="text-xs text-white/60">• {supporter.email}</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/60">
+                        Joined: {new Date(supporter.joinedAt).toLocaleDateString("en-NG", { dateStyle: "medium" })} • Territory: {supporter.state || "Lagos"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-[11px] font-bold">
+                        Active Supporter
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 0: PAID MEMBERSHIP APPROVAL DESK */}
+        {activeTab === "memberships" && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-heading font-black text-xl text-white">
+                  ₦3,200 Member Payment Verification Desk
+                </h3>
+                <p className="text-xs text-white/60">
+                  Confirm bank transfers to Access Bank (1849204812). Approval generates a phone-bound lifetime promo code.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadMemberships}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs"
+              >
+                Refresh List
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {memberships.length === 0 ? (
+                <div className="p-8 rounded-2xl bg-[#171a19] border border-white/10 text-center text-white/60 text-xs">
+                  No membership submissions yet.
+                </div>
+              ) : (
+                memberships.map((mem) => (
+                  <div
+                    key={mem.id}
+                    className="p-5 rounded-2xl bg-[#171a19] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{mem.fullName}</span>
+                        <span className="font-mono text-xs text-[#E85D04] font-bold">({mem.phone})</span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            mem.paymentStatus === "verified"
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-amber-500/20 text-amber-400"
+                          }`}
+                        >
+                          {mem.paymentStatus}
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/70">
+                        Transfer Reference / Sender: <strong className="text-white font-mono">{mem.proofReference || "Bank Transfer"}</strong> • Fee: ₦{mem.amountPaid.toLocaleString()}
+                      </p>
+                      {mem.promoCode && (
+                        <p className="text-xs text-emerald-400 font-mono">
+                          Active Promo Code: <strong>{mem.promoCode}</strong> (Phone Bound)
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {mem.paymentStatus === "pending" ? (
+                        <button
+                          type="button"
+                          disabled={approvingId === mem.id}
+                          onClick={async () => {
+                            setApprovingId(mem.id);
+                            const res = await approvePaidMembership(mem.id);
+                            setApprovingId(null);
+                            if (res.success) {
+                              loadMemberships();
+                            }
+                          }}
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
+                        >
+                          {approvingId === mem.id ? "Verifying..." : "Confirm ₦3,200 & Issue Code"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Code Activated</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: BANK CASHOUT & WITHDRAWAL DESK */}
+        {activeTab === "withdrawals" && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-heading font-black text-xl text-white">
+                  Member Referral Cashout Desk (Min ₦3,000)
+                </h3>
+                <p className="text-xs text-white/60">
+                  Review member bank accounts and initiate transfers for earned referral points (15 pts per referral).
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={loadWithdrawals}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs"
+              >
+                Refresh Cashouts
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {withdrawals.length === 0 ? (
+                <div className="p-8 rounded-2xl bg-[#171a19] border border-white/10 text-center text-white/60 text-xs">
+                  No bank cashout requests submitted yet.
+                </div>
+              ) : (
+                withdrawals.map((req) => (
+                  <div
+                    key={req.id}
+                    className="p-5 rounded-2xl bg-[#171a19] border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{req.accountName}</span>
+                        <span className="font-mono text-xs text-[#E85D04] font-bold">({req.memberPhone})</span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            req.status === "paid"
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-amber-500/20 text-amber-400"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-white/80 flex items-center gap-2 flex-wrap">
+                        <span>Bank: <strong className="text-white">{req.bankName}</strong></span>
+                        <span>•</span>
+                        <span>Account: <strong className="text-white font-mono">{req.accountNumber}</strong></span>
+                        <span>•</span>
+                        <span>Amount: <strong className="text-emerald-400 font-mono">₦{req.nairaAmount.toLocaleString()}</strong> ({req.pointsRedeemed} pts)</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {req.status === "pending" ? (
+                        <button
+                          type="button"
+                          disabled={payingId === req.id}
+                          onClick={async () => {
+                            setPayingId(req.id);
+                            const res = await markWithdrawalAsPaid(req.id);
+                            setPayingId(null);
+                            if (res.success) {
+                              loadWithdrawals();
+                            }
+                          }}
+                          className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition disabled:opacity-50"
+                        >
+                          {payingId === req.id ? "Processing..." : "Mark as Paid to Bank"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Paid &amp; Transferred</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: INCIDENT MODERATION DESK */}
         {activeTab === "incidents" && (

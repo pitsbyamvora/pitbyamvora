@@ -84,19 +84,19 @@ export default function PetitionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-transparent text-foreground pb-20">
       {/* Top Banner */}
-      <section className="bg-[#171A19] text-white py-12 sm:py-16 border-b border-white/10 relative overflow-hidden">
+      <section className="py-14 sm:py-16 border-b border-border/40 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-[#ff5500] text-xs font-bold uppercase tracking-wider border border-white/10">
-              <FileText className="w-3.5 h-3.5 text-[#ff5500]" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 text-[#E85D04] text-xs font-bold uppercase tracking-wider border border-border">
+              <FileText className="w-3.5 h-3.5 text-[#E85D04]" />
               <span>PITS Civic Power Registry</span>
             </div>
-            <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-white">
+            <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-black text-foreground">
               Active Verified Petitions
             </h1>
-            <p className="font-body text-xs sm:text-sm md:text-base text-white/80 leading-relaxed font-normal">
+            <p className="font-body text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed font-normal">
               Back community-driven legislative and policy demands with verified citizen signatures. When petitions hit their targets, our legal desk delivers them directly to regulatory authorities.
             </p>
           </div>
